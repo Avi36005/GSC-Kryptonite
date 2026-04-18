@@ -6,6 +6,7 @@ import Analyzer from './pages/Analyzer';
 import Compliance from './pages/Compliance';
 import FairWatch from './pages/FairWatch';
 import Audit from './pages/Audit';
+import BigQueryPage from './pages/BigQuery';
 import { DomainProvider } from './context/DomainContext';
 
 export default function App() {
@@ -23,6 +24,7 @@ export default function App() {
               <Route path="/compliance" element={<Compliance />} />
               <Route path="/fairwatch" element={<FairWatch />} />
               <Route path="/audit" element={<Audit />} />
+              <Route path="/bigquery" element={<BigQueryPage />} />
             </Routes>
           </main>
         </div>

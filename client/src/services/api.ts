@@ -37,5 +37,105 @@ export const api = {
   async getDomainConfig(domain: string) {
     const res = await fetch(`${API_BASE}/domain-config?domain=${encodeURIComponent(domain)}`);
     return res.json();
-  }
+  },
+
+  /* ── CSV Analysis ── */
+
+  async analyzeCSV(file: File, domain: string) {
+    const formData = new FormData();
+    formData.append('csvFile', file);
+    formData.append('domain', domain);
+
+    const res = await fetch(`${API_BASE}/analyze-csv`, {
+      method: 'POST',
+      body: formData,
+    });
+
+    if (!res.ok) {
+      const errorData = await res.json().catch(() => ({ error: 'Unknown server error' }));
+      throw new Error(errorData.error || `Server error: ${res.status}`);
+    }
+
+    return res.json();
+  },
+
+  async generateUnbiasedCSV(cacheKey: string) {
+    const res = await fetch(`${API_BASE}/generate-unbiased-csv`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ cacheKey }),
+    });
+
+    if (!res.ok) {
+      const errorData = await res.json().catch(() => ({ error: 'Unknown server error' }));
+      throw new Error(errorData.error || `Server error: ${res.status}`);
+    }
+
+    return res.json();
+  },
+
+  /**
+   * Analyze raw data (e.g. from BigQuery) without file upload
+   */
+  async analyzeData(headers: string[], rows: Record<string, string>[], domain: string, sourceName: string) {
+    const res = await fetch(`${API_BASE}/analyze-data`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ headers, rows, domain, sourceName }),
+    });
+
+    if (!res.ok) {
+      const errorData = await res.json().catch(() => ({ error: 'Unknown server error' }));
+      throw new Error(errorData.error || `Server error: ${res.status}`);
+    }
+
+    return res.json();
+  },
+
+  /* ── BigQuery ── */
+
+  async bigqueryTestConnection(projectId: string) {
+    const res = await fetch(`${API_BASE}/bigquery/test-connection`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ projectId }),
+    });
+
+    if (!res.ok) {
+      const errorData = await res.json().catch(() => ({ error: 'Connection failed' }));
+      throw new Error(errorData.error || `Server error: ${res.status}`);
+    }
+
+    return res.json();
+  },
+
+  async bigqueryListTables(projectId: string, datasetId: string) {
+    const res = await fetch(`${API_BASE}/bigquery/list-tables`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ projectId, datasetId }),
+    });
+
+    if (!res.ok) {
+      const errorData = await res.json().catch(() => ({ error: 'Failed to list tables' }));
+      throw new Error(errorData.error || `Server error: ${res.status}`);
+    }
+
+    return res.json();
+  },
+
+  async bigqueryFetchTable(projectId: string, datasetId: string, tableId: string, maxRows = 10000) {
+    const res = await fetch(`${API_BASE}/bigquery/fetch-table`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ projectId, datasetId, tableId, maxRows }),
+    });
+
+    if (!res.ok) {
+      const errorData = await res.json().catch(() => ({ error: 'Failed to fetch table' }));
+      throw new Error(errorData.error || `Server error: ${res.status}`);
+    }
+
+    return res.json();
+  },
 };

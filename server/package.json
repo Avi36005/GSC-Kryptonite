@@ -12,13 +12,17 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@google-cloud/bigquery": "^8.1.1",
     "@google/genai": "^1.50.1",
     "cors": "^2.8.6",
+    "csv-parse": "^6.2.1",
+    "csv-stringify": "^6.7.0",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
     "express-rate-limit": "^8.3.2",
     "jsonwebtoken": "^9.0.3",
     "morgan": "^1.10.1",
+    "multer": "^2.1.1",
     "socket.io": "^4.8.3"
   }
 }

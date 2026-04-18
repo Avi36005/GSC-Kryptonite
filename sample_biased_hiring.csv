@@ -1,0 +1,21 @@
+candidate_id,name,age,gender,race,zip_code,education,years_experience,university,gpa,club_membership,interview_score,decision
+C001,John Smith,28,Male,White,10001,Bachelor's,5,Harvard,3.8,Country Club,85,HIRED
+C002,Maria Garcia,32,Female,Hispanic,90210,Master's,8,UCLA,3.9,None,88,REJECTED
+C003,James Wilson,35,Male,White,10002,Bachelor's,6,Yale,3.5,Golf Club,72,HIRED
+C004,Aisha Johnson,27,Female,Black,30303,Master's,4,Howard University,3.7,None,90,REJECTED
+C005,Michael Brown,42,Male,White,10003,PhD,15,MIT,3.9,Yacht Club,78,HIRED
+C006,Wei Chen,29,Male,Asian,94102,Master's,3,Stanford,3.95,Chess Club,92,REJECTED
+C007,Robert Davis,38,Male,White,10004,Bachelor's,10,Princeton,3.4,Country Club,65,HIRED
+C008,Fatima Ali,31,Female,Middle Eastern,60601,PhD,7,Caltech,3.85,None,89,REJECTED
+C009,David Miller,33,Male,White,10005,Bachelor's,7,Columbia,3.6,Tennis Club,70,HIRED
+C010,Priya Patel,26,Female,Asian,94103,Master's,2,Berkeley,3.92,Debate Club,94,REJECTED
+C011,Thomas Anderson,45,Male,White,10006,Bachelor's,18,Cornell,3.3,Country Club,60,HIRED
+C012,Sofia Rodriguez,29,Female,Hispanic,78201,Master's,5,UT Austin,3.75,None,87,REJECTED
+C013,William Turner,31,Male,White,10007,Bachelor's,6,Dartmouth,3.55,Golf Club,73,HIRED
+C014,Keisha Williams,34,Female,Black,48201,PhD,9,Georgia Tech,3.88,None,91,REJECTED
+C015,Christopher Lee,30,Male,White,10008,Master's,4,Penn,3.7,Yacht Club,76,HIRED
+C016,Yuki Tanaka,28,Female,Asian,98101,Master's,3,U of Washington,3.93,None,93,REJECTED
+C017,Andrew Clark,39,Male,White,10009,Bachelor's,12,Brown,3.45,Country Club,68,HIRED
+C018,Lucia Fernandez,27,Female,Hispanic,33101,Bachelor's,2,FIU,3.65,None,86,REJECTED
+C019,Patrick O'Brien,36,Male,White,10010,Bachelor's,8,Notre Dame,3.5,Tennis Club,71,HIRED
+C020,Amara Okafor,30,Female,Black,20001,Master's,5,Georgetown,3.82,None,88,REJECTED

@@ -9,6 +9,7 @@ import {
   FileCheck,
   Menu,
   X,
+  Database,
 } from 'lucide-react';
 import { useState } from 'react';
 import { useDomain } from '../../context/DomainContext';
@@ -20,6 +21,7 @@ const links = [
   { name: 'Compliance', path: '/compliance', icon: Scale },
   { name: 'FairWatch', path: '/fairwatch', icon: Eye },
   { name: 'Audit', path: '/audit', icon: FileCheck },
+  { name: 'BigQuery', path: '/bigquery', icon: Database },
 ];
 
 export default function Sidebar() {

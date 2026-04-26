@@ -39,9 +39,7 @@ const MODELS = {
 };
 
 // ── Singleton Vertex AI client ─────────────────────────────
-const project = process.env.VERTEX_PROJECT_ID || 'fairai-494213-f8';
-const location = process.env.VERTEX_LOCATION || 'us-central1';
-const vertexAI = new VertexAI({ project, location });
+const vertexAI = new VertexAI({ project: PROJECT_ID, location: LOCATION });
 
 /**
  * Get a Vertex AI generative model instance.

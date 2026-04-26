@@ -29,7 +29,9 @@ export default function App() {
               <Route path="/analyzer" element={<Analyzer />} />
               <Route path="/compliance" element={<Compliance />} />
               <Route path="/fairwatch" element={<FairWatch />} />
-              <Route path="/audit" element={<AuditChat />} />
+              <Route path="/audit" element={<Audit />} />
+
+              <Route path="/audit-chat" element={<AuditChat />} />
               <Route path="/drift" element={<DriftAnalysis />} />
             </Routes>
           </main>

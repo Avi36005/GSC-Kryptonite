@@ -20,7 +20,7 @@ const item = {
 };
 
 export default function DriftAnalysis() {
-  const { domainConfig } = useDomain();
+  const { domainConfig, activeDomain } = useDomain();
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
@@ -28,7 +28,7 @@ export default function DriftAnalysis() {
   const fetchDrift = async () => {
     setLoading(true);
     try {
-      const res = await api.getDriftAnalysis(domainConfig?.id || 'FINANCE');
+      const res = await api.getDriftAnalysis(activeDomain || 'hiring');
       setData(res);
       setError(null);
     } catch (err) {
@@ -61,14 +61,9 @@ export default function DriftAnalysis() {
     <motion.div className="space-y-8 pb-12" variants={container} initial="hidden" animate="show">
       <motion.header className="flex justify-between items-end border-b border-neutral-800 pb-8" variants={item}>
         <div>
-          <div className="flex items-center gap-3 mb-3">
-            <div className="p-2 bg-purple-500/10 rounded-lg border border-purple-500/20">
-              <Database className="text-purple-400" size={20} />
-            </div>
-            <span className="text-sm font-bold tracking-widest text-purple-400 uppercase">BigQuery Powered</span>
-          </div>
+
           <h1 className="text-5xl font-black tracking-tight text-white mb-3">
-            Bias & Drift <span className="text-blue-500">Analysis</span>
+            Bias & Drift <span className="text-white">Analysis</span>
           </h1>
           <p className="text-neutral-400 text-xl max-w-2xl">
             Detecting concept drift and demographic parity shifts in production models using historical BigQuery datasets.

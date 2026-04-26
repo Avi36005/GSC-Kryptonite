@@ -5,8 +5,6 @@
  */
 
 import { geminiFlash, generateWithFallback } from '../services/geminiClient.js';
-import { systemState } from '../services/systemState.js';
-import { firestoreService } from '../services/firestoreService.js';
 
 // ── Regulatory Knowledge Base (RAG source) ────────────────
 const REGULATORY_KB = [
@@ -91,7 +89,7 @@ function retrieveRelevantDocs(query, topK = 3) {
 
 // ── Agent ─────────────────────────────────────────────────
 export class AuditChatAgent {
-  async chat(userMessage, chatHistory = [], decisionContext = null) {
+  async chat(userMessage, chatHistory = [], systemContext = null) {
     try {
       const relevantDocs = retrieveRelevantDocs(userMessage, 3);
 
@@ -107,44 +105,78 @@ export class AuditChatAgent {
         .map((h) => `${h.role === 'user' ? 'Human' : 'Assistant'}: ${h.content}`)
         .join('\n');
 
-      const systemSummary = systemState.getSummary();
-      let recentDecisions = systemState.getRecentDecisions(5);
-      
-      // If in-memory is empty, try Firestore
-      if (recentDecisions.length === 0) {
-        recentDecisions = await firestoreService.getRecentLogs(5);
+      // ── Build Live System Context ──────────────────────
+      let liveSystemBlock = '';
+      if (systemContext) {
+        const {
+          systemStatus,
+          totalDecisions,
+          interceptedCount,
+          bypassedCount,
+          recentDecisions,
+          lastInterceptedDecision,
+          currentDriftScore,
+          driftData,
+          recentAuditLogs
+        } = systemContext;
+
+        const haltStatus = systemStatus?.halt ? '🚨 EMERGENCY HALT IS ACTIVE — all decisions are bypassing guardrails.' : '✅ SYSTEM OPERATIONAL — guardrails are active.';
+        const driftLevel = currentDriftScore != null
+          ? `Current Drift Score: ${(currentDriftScore * 100).toFixed(1)}%`
+          : 'Drift Score: Not available';
+
+        // Format recent intercepted decisions
+        const recentInterceptedSummary = (recentDecisions || [])
+          .filter(d => d.finalOutcome === 'INTERCEPTED')
+          .slice(-3)
+          .map(d => `- Decision ${d.decisionId}: Flagged features: [${(d.biasReport?.flaggedFeatures || []).join(', ')}]. Bias score: ${(d.biasReport?.confidenceScore || 0).toFixed(2)}. Domain: ${d.domain || 'N/A'}.`)
+          .join('\n') || 'No recent intercepted decisions.';
+
+        // Format last intercepted decision detail
+        const lastDecisionDetail = lastInterceptedDecision
+          ? `Most Recent Intercept:\n  ID: ${lastInterceptedDecision.decisionId}\n  Outcome: ${lastInterceptedDecision.finalOutcome}\n  Bias Reasoning: ${lastInterceptedDecision.biasReport?.reasoning || 'N/A'}\n  Explanation: ${lastInterceptedDecision.explanation || 'N/A'}`
+          : 'No intercepted decisions yet this session.';
+
+        liveSystemBlock = `
+== LIVE PLATFORM STATUS (Real-Time) ==
+${haltStatus}
+Total Decisions Processed: ${totalDecisions || 0}
+Intercepted (Biased): ${interceptedCount || 0} | Passed: ${bypassedCount || 0}
+${driftLevel}
+
+Recent Intercepted Decisions:
+${recentInterceptedSummary}
+
+${lastDecisionDetail}
+
+== END LIVE STATUS ==`;
       }
 
-      const systemCtx = `
-### LIVE SYSTEM STATE
-- Halt Status: ${systemSummary.systemHalt ? 'EMERGENCY HALT (All guardrails bypassed)' : 'Operational'}
-- Last Halt: ${systemSummary.lastHaltAt || 'N/A'}
-- Processed Decisions (Last 50): ${systemSummary.stats.totalProcessed}
-- Bias Rate: ${systemSummary.stats.biasRate}
-- Recent Alerts: ${systemSummary.recentAlerts.join('; ') || 'None'}
-
-### RECENT ACTIVITY LOG (Last 5 decisions)
-${JSON.stringify(recentDecisions, null, 2)}
-`;
-
-      const decisionCtx = decisionContext
-        ? `\n\nCURRENT DECISION UNDER AUDIT:\n${JSON.stringify(decisionContext, null, 2)}`
+      // ── Build Specific Decision Context ───────────────
+      const decisionCtx = systemContext?.decisionId
+        ? `\n\nSPECIFIC DECISION UNDER AUDIT:\n${JSON.stringify(systemContext, null, 2)}`
         : '';
 
       const fullPrompt = `You are the FairAI Guardian AI Auditor — an expert AI governance assistant powered by Gemini 2.5 Flash on Google Cloud (Project: fairai-494213-f8).
 
 Your expertise: AI bias detection, GDPR/EU AI Act/NIST AI RMF compliance, Fair lending (ECOA/FHA), HIPAA healthcare AI, disparate impact doctrine, model explainability (SHAP, LIME).
 
-You are connected to the live FairAI Guardian stream. You know exactly what is happening in the system right now.
+You have FULL ACCESS to the live state of the FairAI Guardian platform below. Use this to answer questions like:
+- "Why was the last decision intercepted?"
+- "Is the system in halt mode?"
+- "What is the current bias drift score?"
+- "How many decisions have been flagged today?"
+- "What went wrong?"
 
 STRICT RULES:
-1. Use the "LIVE SYSTEM STATE" and "RECENT ACTIVITY LOG" below to answer questions about what is happening in the system.
-2. Use the "RETRIEVED REGULATORY CONTEXT" to provide legal grounding.
-3. If the user asks "What is happening?", "Status?", or about recent flags, prioritize the Live context.
-4. Cite specific regulations (e.g., "GDPR Article 22", "EU AI Act Article 14").
-5. Be professional, authoritative, and concise.
-
-${systemCtx}
+1. Use the LIVE PLATFORM STATUS to answer system state questions accurately.
+2. Use the REGULATORY CONTEXT to answer compliance/legal questions.
+3. Do NOT hallucinate. If data is unavailable, say so.
+4. Be concise, professional, and actionable.
+5. Cite specific regulations (e.g., "GDPR Article 22", "EU AI Act Article 14") when relevant.
+6. Use bullet points for lists.
+7. Always suggest actionable next steps.
+${liveSystemBlock}
 
 RETRIEVED REGULATORY CONTEXT:
 ${ragContext}

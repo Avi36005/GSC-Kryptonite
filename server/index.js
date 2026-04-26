@@ -9,10 +9,6 @@ import morgan from 'morgan';
 // Load environment config
 dotenv.config({ path: '../.env' });
 
-// Initialize Firebase
-import { initFirebase } from './services/firestoreService.js';
-initFirebase();
-
 const app = express();
 const server = http.createServer(app);
 

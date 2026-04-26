@@ -4,42 +4,43 @@ import { getDomainConfig } from '../domains/index.js';
 
 import { bigqueryService } from '../services/bigqueryService.js';
 
-import { systemState } from '../services/systemState.js';
-
 const router = express.Router();
 const guardAgent = new DecisionGuardAgent();
+
+// System State
+let systemStatus = {
+  halt: false,
+  lastHaltAt: null
+};
+
+// Simulated database for audit logs (stored on app for cross-route access)
+const decisionLogs = [];
 
 /**
  * GET /api/system/status
  */
 router.get('/system/status', (req, res) => {
-  res.json(systemState.getStatus());
+  res.json(systemStatus);
 });
-
-/**
- * GET /api/system/summary
- */
-router.get('/system/summary', async (req, res) => {
-  const summary = await systemState.getSummary();
-  res.json(summary);
-});
-
 
 /**
  * POST /api/system/halt
  */
 router.post('/system/halt', (req, res) => {
   const { halt } = req.body;
-  systemState.updateStatus({ halt: !!halt });
-  const status = systemState.getStatus();
+  systemStatus.halt = !!halt;
+  systemStatus.lastHaltAt = systemStatus.halt ? new Date().toISOString() : systemStatus.lastHaltAt;
   
   // Notify all clients via socket
   const io = req.app.get('io');
   if (io) {
-    io.emit('system_status_change', status);
+    io.emit('system_status_change', systemStatus);
   }
   
-  res.json(status);
+  // Expose system status for cross-route reading (e.g., chat)
+  req.app.set('systemStatus', systemStatus);
+  
+  res.json(systemStatus);
 });
 
 /**
@@ -69,8 +70,7 @@ router.post('/decisions/intercept', async (req, res) => {
     }
 
     // EMERGENCY HALT CHECK
-    const status = systemState.getStatus();
-    if (status.halt) {
+    if (systemStatus.halt) {
       const bypassResult = {
         decisionId: id,
         timestamp: new Date().toISOString(),
@@ -83,14 +83,26 @@ router.post('/decisions/intercept', async (req, res) => {
         explanation: "Decision allowed to pass without evaluation due to active Emergency Halt.",
         engine: 'NONE'
       };
-      systemState.addDecision(bypassResult);
+      
+      // Log to BigQuery even if bypassed (for audit)
+      await bigqueryService.logDecision(bypassResult);
+      
+      decisionLogs.push(bypassResult);
       const io = req.app.get('io');
       if (io) io.emit('new_decision_intercepted', bypassResult);
       return res.json(bypassResult);
     }
 
     const evaluation = await guardAgent.evaluate(id, features, prediction, domain);
-    systemState.addDecision(evaluation);
+    
+    // Log to BigQuery for drift tracking and audit
+    await bigqueryService.logDecision(evaluation);
+    
+    decisionLogs.push(evaluation);
+
+    // Expose decision logs for cross-route reading (e.g., AI Auditor chat)
+    req.app.set('decisionLogs', decisionLogs);
+    req.app.set('systemStatus', systemStatus);
 
     // Emit real-time event to connected frontend clients
     const io = req.app.get('io');
@@ -110,7 +122,7 @@ router.post('/decisions/intercept', async (req, res) => {
  * Returns historical decisions
  */
 router.get('/decisions', (req, res) => {
-  res.json(systemState.getRecentDecisions(50));
+  res.json(decisionLogs);
 });
 
 /**
@@ -158,7 +170,9 @@ router.get('/drift', async (req, res) => {
     // Format historical drift
     const historicalDrift = rawDrift.map(row => ({
       date: row.date,
-      score: row.driftScore ? row.driftScore * 100 : (row.biasedDecisions / (row.totalDecisions || 1)) * 100
+      score: row.driftScore ? row.driftScore * 100 : (row.biasedDecisions / (row.totalDecisions || 1)) * 100,
+      accuracy: (row.avgConfidence || 0.85) * 100,
+      fairness: 1 - (row.biasedDecisions / (row.totalDecisions || 1))
     }));
 
     // Generate/Fetch current bias (Mocked for now as per design requirements)

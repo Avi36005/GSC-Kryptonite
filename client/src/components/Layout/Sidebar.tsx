@@ -61,14 +61,14 @@ export default function Sidebar() {
         <div className={`flex items-center ${collapsed ? 'justify-center' : 'justify-between'}`}>
           {!collapsed && (
             <div className="flex items-center gap-2">
-              <ShieldAlert className="text-blue-500" size={22} />
+              <ShieldAlert className="text-white" size={22} />
               <div>
                 <h1 className="text-lg font-bold text-white leading-tight">FairAI</h1>
                 <p className="text-[10px] text-neutral-500 leading-tight">Guardian Platform</p>
               </div>
             </div>
           )}
-          {collapsed && <ShieldAlert className="text-blue-500" size={22} />}
+          {collapsed && <ShieldAlert className="text-white" size={22} />}
           <button
             onClick={() => setCollapsed(!collapsed)}
             className="text-neutral-500 hover:text-white transition-colors p-1"
@@ -108,7 +108,7 @@ export default function Sidebar() {
               title={link.name}
               className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200 ${
                 isActive
-                  ? 'bg-blue-600/10 text-white border border-blue-500/20'
+                  ? 'bg-white/10 text-white border border-white/20'
                   : 'text-neutral-400 hover:text-neutral-200 hover:bg-neutral-800 border border-transparent'
               } ${collapsed ? 'justify-center' : ''}`}
             >

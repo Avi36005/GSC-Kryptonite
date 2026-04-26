@@ -2,29 +2,28 @@ import { PubSub } from '@google-cloud/pubsub';
 
 class PubSubService {
   constructor() {
-    this.pubsub = new PubSub();
-    this.topicName = 'bias-alerts';
-  }
-
-  async publishAlert(alert) {
-    try {
-      const dataBuffer = Buffer.from(JSON.stringify(alert));
-      await this.pubsub.topic(this.topicName).publishMessage({ data: dataBuffer });
-      console.log('[PubSub] Alert published:', alert.id);
-    } catch (error) {
-      console.error('PubSub Publish Error:', error);
-      throw error;
+    this.isSimulated = !process.env.GOOGLE_APPLICATION_CREDENTIALS;
+    if (!this.isSimulated) {
+      try {
+        this.pubsub = new PubSub();
+        this.topicName = 'governance-events';
+      } catch (e) {
+        this.isSimulated = true;
+      }
     }
   }
 
   async publishDecisionEvent(data) {
+    if (this.isSimulated) {
+      console.log('[PubSub Simulated] Event published:', data.decisionId);
+      return;
+    }
+
     try {
       const dataBuffer = Buffer.from(JSON.stringify(data));
       await this.pubsub.topic(this.topicName).publishMessage({ data: dataBuffer });
-      console.log('[PubSub] Real Event published:', data.decisionId);
     } catch (error) {
       console.error('PubSub Publish Error:', error);
-      throw error;
     }
   }
 }

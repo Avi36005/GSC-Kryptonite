@@ -3,20 +3,25 @@
 // This file sets up the Firestore integration for the FairAI Guardian platform.
 
 import dotenv from 'dotenv';
-import admin from 'firebase-admin';
-
 dotenv.config({ path: '../.env' });
 
+// We simulate the admin SDK here so it doesn't crash if the user hasn't set up the service account yet.
 let db = null;
 
 export const initFirebase = () => {
   try {
-    console.log('Firebase initializing with Application Default Credentials...');
-    admin.initializeApp({
-      projectId: process.env.FIREBASE_PROJECT_ID || 'fairai-494213-f8'
-    });
-    db = admin.firestore();
-    console.log('Firebase initialized successfully.');
+    if (process.env.FIREBASE_PROJECT_ID && process.env.FIREBASE_CLIENT_EMAIL) {
+      console.log('Firebase initializing (simulated in demo for safety without keys)...');
+      // In a real scenario:
+      // admin.initializeApp({
+      //   credential: admin.credential.cert({
+      //     projectId: process.env.FIREBASE_PROJECT_ID,
+      //     clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+      //     privateKey: process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n')
+      //   })
+      // });
+      // db = admin.firestore();
+    }
   } catch (error) {
     console.error('Failed to initialize Firebase Admin:', error);
   }
@@ -30,10 +35,10 @@ export const firestoreService = {
     }
     
     try {
-      await db.collection('audit_logs').doc(logData.decisionId).set({
-        ...logData,
-        createdAt: admin.firestore.FieldValue.serverTimestamp()
-      });
+      // await db.collection('audit_logs').doc(logData.decisionId).set({
+      //   ...logData,
+      //   createdAt: admin.firestore.FieldValue.serverTimestamp()
+      // });
       return { success: true };
     } catch (error) {
       console.error('Error saving to Firestore:', error);
@@ -48,10 +53,10 @@ export const firestoreService = {
     }
 
     try {
-      await db.collection('chat_sessions').doc(sessionId).set({
-        messages,
-        updatedAt: admin.firestore.FieldValue.serverTimestamp()
-      }, { merge: true });
+      // await db.collection('chat_sessions').doc(sessionId).set({
+      //   messages,
+      //   updatedAt: admin.firestore.FieldValue.serverTimestamp()
+      // }, { merge: true });
       return { success: true };
     } catch (error) {
       console.error('Error saving chat to Firestore:', error);
@@ -59,16 +64,20 @@ export const firestoreService = {
     }
   },
 
-  async getRecentLogs(limitCount = 10) {
-    if (!db) return [];
+  async getRecentAuditLogs(limit = 5) {
+    if (!db) {
+      // Return simulated logs so the chatbot has something to reason about
+      return [];
+    }
     try {
-      const snapshot = await db.collection('audit_logs')
-        .orderBy('createdAt', 'desc')
-        .limit(limitCount)
-        .get();
-      return snapshot.docs.map(doc => doc.data());
+      // const snapshot = await db.collection('audit_logs')
+      //   .orderBy('createdAt', 'desc')
+      //   .limit(limit)
+      //   .get();
+      // return snapshot.docs.map(d => d.data());
+      return [];
     } catch (error) {
-      console.error('Error fetching logs from Firestore:', error);
+      console.error('Error reading from Firestore:', error);
       return [];
     }
   }

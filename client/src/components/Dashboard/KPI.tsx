@@ -13,18 +13,18 @@ interface KPIProps {
 export default function KPI({ title, value, trend, trendUp, icon, subtitle }: KPIProps) {
   return (
     <motion.div
-      className="bg-neutral-900/40 backdrop-blur-md border border-neutral-800/50 p-6 rounded-2xl flex flex-col gap-4 hover:border-neutral-700/80 hover:bg-neutral-800/50 hover:shadow-2xl hover:shadow-blue-900/10 transition-all duration-300 shadow-xl group"
+      className="bg-neutral-900/40 backdrop-blur-md border border-neutral-800/50 p-6 rounded-2xl flex flex-col gap-4 hover:border-neutral-700/80 hover:bg-neutral-800/50 hover:shadow-2xl hover:shadow-white/5 transition-all duration-300 shadow-xl group"
       whileHover={{ y: -4, transition: { duration: 0.2 } }}
     >
       <div className="flex items-center justify-between">
         <span className="text-neutral-400 text-xs font-bold uppercase tracking-widest">{title}</span>
-        <div className="text-blue-400 bg-blue-500/10 p-2.5 rounded-xl border border-blue-500/20 group-hover:bg-blue-500/20 transition-colors">
+        <div className="text-black bg-white p-2.5 rounded-xl border border-white/20 group-hover:bg-neutral-200 transition-colors">
           {icon}
         </div>
       </div>
       
       <div>
-        <h3 className="text-4xl font-black text-white mb-2 tracking-tight group-hover:text-blue-50 group-transition-colors">
+        <h3 className="text-4xl font-black text-white mb-2 tracking-tight group-hover:text-neutral-100 transition-colors">
           {value}
         </h3>
         

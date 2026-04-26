@@ -48,13 +48,13 @@ export default function Landing() {
           </div>
           
           <h1 className="text-6xl md:text-8xl lg:text-9xl font-black tracking-tighter mb-8 leading-[0.9]">
-            COMPLIANCE <br />
-            <span className="text-neutral-500">BY DESIGN.</span>
+            STOP BIAS. <br />
+            <span className="text-neutral-500">BEFORE IT DECIDES.</span>
           </h1>
           
           <p className="text-lg md:text-xl text-neutral-400 max-w-2xl mx-auto leading-relaxed mb-12 font-medium">
-            The world's first AI-powered auditor with deep system awareness. 
-            Automate fairness, explainability, and regulatory adherence in real-time.
+            Every automated decision, audited and corrected in real time.
+            The AI governance platform that ensures fairness, explainability, and compliance — at machine speed.
           </p>
           
           <div className="flex flex-col sm:flex-row items-center justify-center gap-6">

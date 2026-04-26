@@ -36,7 +36,7 @@
 
 **FairAI Guardian** is a full-stack AI governance platform built for the **Google Solution Challenge 2026**. It acts as a real-time middleware that sits between AI models and their consumers, intercepting every automated decision, detecting bias, ensuring legal compliance, and providing explainable, auditable outcomes — all powered by **Google's Gemini 2.5** family of models via **Vertex AI**.
 
-> _"The world's first AI-powered auditor with deep system awareness. Automate fairness, explainability, and regulatory adherence in real-time."_
+> _"Stop bias before it decides — AI governance at machine speed."_
 
 ---
 

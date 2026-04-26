@@ -39,7 +39,7 @@ const categoryBias = [
   { category: 'Location', score: 24 },
 ];
 
-const PIE_COLORS = ['#ffffff', '#a3a3a3', '#525252', '#262626'];
+const PIE_COLORS = ['#6366f1', '#8b5cf6', '#06b6d4', '#10b981'];
 
 const container = {
   hidden: { opacity: 0 },
@@ -172,7 +172,7 @@ export default function Dashboard() {
           <div className="flex items-center justify-between mb-8">
             <h3 className="text-xl font-bold text-white tracking-tight">Compliance Trend</h3>
             <div className="flex items-center gap-2">
-              <span className="w-3 h-3 rounded-full bg-white"></span>
+              <span className="w-3 h-3 rounded-full bg-indigo-500"></span>
               <span className="text-xs text-neutral-400 font-bold uppercase tracking-widest">Compliance %</span>
             </div>
           </div>
@@ -181,8 +181,8 @@ export default function Dashboard() {
               <AreaChart data={biasPerHour}>
                 <defs>
                   <linearGradient id="colorCompliance" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#ffffff" stopOpacity={0.3}/>
-                    <stop offset="95%" stopColor="#ffffff" stopOpacity={0}/>
+                    <stop offset="5%" stopColor="#6366f1" stopOpacity={0.4}/>
+                    <stop offset="95%" stopColor="#6366f1" stopOpacity={0}/>
                   </linearGradient>
                 </defs>
                 <XAxis 
@@ -215,8 +215,8 @@ export default function Dashboard() {
                 <Area 
                   type="monotone" 
                   dataKey="value" 
-                  stroke="#ffffff" 
-                  strokeWidth={4}
+                  stroke="#6366f1" 
+                  strokeWidth={3}
                   fillOpacity={1} 
                   fill="url(#colorCompliance)" 
                 />
@@ -317,7 +317,7 @@ export default function Dashboard() {
                 />
                 <Bar dataKey="score" name="Bias Score" radius={[4, 4, 0, 0]}>
                   {categoryBias.map((entry, index) => (
-                    <Cell key={index} fill={entry.score > 25 ? '#ffffff' : entry.score > 15 ? '#a3a3a3' : '#525252'} />
+                    <Cell key={index} fill={entry.score > 25 ? '#ef4444' : entry.score > 15 ? '#f59e0b' : '#10b981'} />
                   ))}
                 </Bar>
               </BarChart>

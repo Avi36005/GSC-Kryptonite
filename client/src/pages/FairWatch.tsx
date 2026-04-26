@@ -32,6 +32,7 @@ export default function FairWatch() {
   const [driftData, setDriftData] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [fatalError, setFatalError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -73,14 +74,22 @@ export default function FairWatch() {
     };
   }, [activeDomain]);
 
+  // Safely get the last historical drift entry
+  const lastDrift = useMemo(() => {
+    const arr = driftData?.historicalDrift;
+    if (Array.isArray(arr) && arr.length > 0) return arr[arr.length - 1];
+    return null;
+  }, [driftData]);
+
   // Transform historical drift for the chart if available
   const chartData = useMemo(() => {
-    if (driftData?.historicalDrift?.length) {
-      return driftData.historicalDrift.map((d: any) => ({
-        day: d.date,
-        drift: d.score,
-        accuracy: d.accuracy || (90 + Math.random() * 5),
-        fairness: (d.fairness || 0.85) * 100 // Scale to 100 for chart visibility
+    const arr = driftData?.historicalDrift;
+    if (Array.isArray(arr) && arr.length > 0) {
+      return arr.map((d: any) => ({
+        day: d.date ?? 'N/A',
+        drift: d.score ?? 0,
+        accuracy: typeof d.accuracy === 'number' ? d.accuracy : 90,
+        fairness: typeof d.fairness === 'number' ? d.fairness * 100 : 85,
       }));
     }
     return driftTimeline;
@@ -89,12 +98,15 @@ export default function FairWatch() {
   // Use real feature shifts if available
   const displayShifts = useMemo(() => {
     if (driftData?.driftContributors?.length) {
-      return driftData.driftContributors.map((c: any) => ({
-        feature: c.feature,
-        shift: `+${c.drift.toFixed(1)}%`,
-        severity: c.drift > 15 ? 'Critical' : c.drift > 10 ? 'Warning' : 'Stable',
-        detail: `Feature importance shifted by ${c.drift.toFixed(1)}%`
-      }));
+      return driftData.driftContributors.map((c: any) => {
+        const drift = typeof c.drift === 'number' ? c.drift : 0;
+        return {
+          feature: c.feature ?? 'Unknown',
+          shift: `+${drift.toFixed(1)}%`,
+          severity: drift > 15 ? 'Critical' : drift > 10 ? 'Warning' : 'Stable',
+          detail: `Feature importance shifted by ${drift.toFixed(1)}%`
+        };
+      });
     }
     return featureShifts;
   }, [driftData]);
@@ -115,6 +127,19 @@ export default function FairWatch() {
   const forceRetrain = () => {
     alert('Model retraining initiated. This process may take a while.');
   };
+
+  if (fatalError) {
+    return (
+      <div className="flex flex-col items-center justify-center h-full space-y-4 text-center px-8">
+        <AlertTriangle size={40} className="text-rose-400" />
+        <p className="text-white font-bold text-lg">FairWatch encountered an error</p>
+        <p className="text-neutral-400 text-sm max-w-md">{fatalError}</p>
+        <button onClick={() => { setFatalError(null); setDriftData(null); setIsLoading(true); }} className="px-4 py-2 bg-white text-black rounded-lg text-sm font-bold">
+          Retry
+        </button>
+      </div>
+    );
+  }
 
   if (isLoading && !driftData) {
     return (
@@ -163,20 +188,20 @@ export default function FairWatch() {
         <MetricCard 
           label="Operational Drift" 
           value={driftScore != null ? `${driftScore.toFixed(1)}%` : '4.2%'} 
-          sub={driftScore && driftScore > 15 ? "Action Required" : "Within safe limits"}
-          color={driftScore && driftScore > 15 ? "rose" : "amber"}
+          sub={driftScore != null && driftScore > 15 ? "Action Required" : "Within safe limits"}
+          color={driftScore != null && driftScore > 15 ? "rose" : "amber"}
           icon={<Activity size={20} />}
         />
         <MetricCard 
           label="Model Accuracy" 
-          value={driftData?.historicalDrift?.length ? `${driftData.historicalDrift[driftData.historicalDrift.length - 1].accuracy.toFixed(1)}%` : '88.3%'} 
+          value={lastDrift && typeof lastDrift.accuracy === 'number' ? `${lastDrift.accuracy.toFixed(1)}%` : '88.3%'} 
           sub="+0.4% since last week"
           color="emerald"
           icon={<ShieldCheck size={20} />}
         />
         <MetricCard 
           label="Fairness Index" 
-          value={driftData?.historicalDrift?.length ? driftData.historicalDrift[driftData.historicalDrift.length - 1].fairness.toFixed(2) : '0.83'} 
+          value={lastDrift && typeof lastDrift.fairness === 'number' ? lastDrift.fairness.toFixed(2) : '0.83'} 
           sub="Target: > 0.80"
           color="neutral"
           icon={<TrendingUp size={20} />}

@@ -1,0 +1,39 @@
+{
+  "datasetId": "fairai_guardian_data",
+  "tables": [
+    {
+      "tableId": "audit_logs",
+      "schema": [
+        { "name": "decisionId", "type": "STRING", "mode": "REQUIRED" },
+        { "name": "domain", "type": "STRING", "mode": "REQUIRED" },
+        { "name": "timestamp", "type": "TIMESTAMP", "mode": "REQUIRED" },
+        { "name": "originalPrediction", "type": "STRING", "mode": "REQUIRED" },
+        { "name": "mitigatedPrediction", "type": "STRING", "mode": "REQUIRED" },
+        { "name": "finalOutcome", "type": "STRING", "mode": "REQUIRED" },
+        { "name": "explanation", "type": "STRING", "mode": "NULLABLE" },
+        { "name": "isBiased", "type": "BOOLEAN", "mode": "REQUIRED" },
+        { "name": "isCompliant", "type": "BOOLEAN", "mode": "REQUIRED" }
+      ]
+    },
+    {
+      "tableId": "bias_reports",
+      "schema": [
+        { "name": "decisionId", "type": "STRING", "mode": "REQUIRED" },
+        { "name": "timestamp", "type": "TIMESTAMP", "mode": "REQUIRED" },
+        { "name": "confidenceScore", "type": "FLOAT", "mode": "REQUIRED" },
+        { "name": "flaggedFeatures", "type": "STRING", "mode": "REPEATED" },
+        { "name": "reasoning", "type": "STRING", "mode": "NULLABLE" }
+      ]
+    },
+    {
+      "tableId": "model_drift",
+      "schema": [
+        { "name": "modelId", "type": "STRING", "mode": "REQUIRED" },
+        { "name": "timestamp", "type": "TIMESTAMP", "mode": "REQUIRED" },
+        { "name": "driftScore", "type": "FLOAT", "mode": "REQUIRED" },
+        { "name": "accuracy", "type": "FLOAT", "mode": "REQUIRED" },
+        { "name": "fairnessMetric", "type": "FLOAT", "mode": "REQUIRED" }
+      ]
+    }
+  ]
+}

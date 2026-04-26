@@ -9,6 +9,10 @@ import morgan from 'morgan';
 // Load environment config
 dotenv.config({ path: '../.env' });
 
+// Initialize Firebase
+import { initFirebase } from './services/firestoreService.js';
+initFirebase();
+
 const app = express();
 const server = http.createServer(app);
 
@@ -35,10 +39,15 @@ app.use(limiter);
 // API routes
 import apiRoutes from './routes/api.js';
 import csvRoutes from './routes/csvAnalysis.js';
-import bigqueryRoutes from './routes/bigquery.js';
+import chatRoutes from './routes/chat.js';
+import autofixRoutes from './routes/autofix.js';
+import insightsRoutes from './routes/insights.js';
+
 app.use('/api', apiRoutes);
 app.use('/api', csvRoutes);
-app.use('/api', bigqueryRoutes);
+app.use('/api', chatRoutes);
+app.use('/api', autofixRoutes);
+app.use('/api', insightsRoutes);
 
 // Socket.io Connection Logic
 io.on('connection', (socket) => {
@@ -58,7 +67,7 @@ app.get('/', (req, res) => {
 });
 
 // Start Server
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 5001;
 server.listen(PORT, () => {
   console.log(`FairAI Guardian server running on port ${PORT}`);
 });

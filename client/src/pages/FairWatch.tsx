@@ -1,7 +1,7 @@
-import { Eye, TrendingUp, AlertTriangle, RefreshCw } from 'lucide-react';
+import { Eye, TrendingUp, AlertTriangle, RefreshCw, Activity, ShieldCheck, Zap } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useEffect, useState } from 'react';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine, Area, AreaChart } from 'recharts';
 import { api } from '../services/api';
 import { useDomain } from '../context/DomainContext';
 
@@ -32,135 +32,287 @@ export default function FairWatch() {
   const { domainConfig } = useDomain();
 
   useEffect(() => {
-    api.getDriftData().then((data) => {
+    api.getDriftAnalysis(domainConfig?.id || 'hiring').then((data) => {
       if (data?.drift_score != null) setDriftScore(data.drift_score);
     }).catch(() => {});
-  }, []);
+  }, [domainConfig?.id]);
+
+  const syncMetrics = () => {
+    api.getDriftAnalysis(domainConfig?.id || 'hiring').then((data) => {
+      if (data?.drift_score != null) setDriftScore(data.drift_score);
+      alert('Metrics synchronized successfully');
+    }).catch(() => alert('Failed to sync metrics'));
+  };
+
+  const forceRetrain = () => {
+    alert('Model retraining initiated. This process may take a while.');
+  };
 
   return (
-    <motion.div className="space-y-6" variants={container} initial="hidden" animate="show">
-      <motion.header className="mb-2" variants={item}>
-        <h1 className="text-3xl font-bold text-white flex items-center gap-3">
-          <Eye className="text-blue-500" size={32} /> {domainConfig ? `${domainConfig.name} - ` : ''}FairWatch Monitor
-        </h1>
-        <p className="text-neutral-400">Post-deployment model drift and long-term fairness assurance.</p>
+    <motion.div className="space-y-8 pb-10" variants={container} initial="hidden" animate="show">
+      <motion.header className="relative mb-10 overflow-hidden rounded-3xl bg-neutral-900/40 p-8 border border-neutral-800/50 backdrop-blur-xl" variants={item}>
+        <div className="absolute top-0 right-0 -mt-20 -mr-20 w-64 h-64 bg-blue-600/10 blur-[100px] rounded-full"></div>
+        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
+          <div className="flex items-center gap-6">
+            <div className="p-4 bg-gradient-to-br from-blue-600 to-blue-400 rounded-2xl shadow-[0_0_30px_rgba(59,130,246,0.3)]">
+              <Eye className="text-white" size={32} />
+            </div>
+            <div>
+              <h1 className="text-4xl font-black tracking-tight text-white mb-2">
+                FairWatch Monitor {domainConfig ? <span className="bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-emerald-400">/ {domainConfig.name}</span> : ''}
+              </h1>
+              <p className="text-neutral-400 text-lg font-medium max-w-2xl">
+                Real-time performance surveillance and long-term fairness assurance for production models.
+              </p>
+            </div>
+          </div>
+          <div className="flex gap-3">
+            <button onClick={syncMetrics} className="px-5 py-2.5 bg-neutral-800 hover:bg-neutral-700 text-white rounded-xl text-sm font-bold transition-all border border-neutral-700/50 flex items-center gap-2">
+              <RefreshCw size={16} /> Sync Metrics
+            </button>
+            <button onClick={forceRetrain} className="px-5 py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-sm font-bold transition-all shadow-[0_0_20px_rgba(37,99,235,0.2)] flex items-center gap-2">
+              <Zap size={16} /> Force Retrain
+            </button>
+          </div>
+        </div>
       </motion.header>
 
-
-      {/* KPIs Row */}
-      <motion.div className="grid grid-cols-1 md:grid-cols-4 gap-4" variants={item}>
-        <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-4 text-center">
-          <p className="text-xs text-neutral-500 uppercase tracking-wider font-semibold">Current Drift</p>
-          <p className="text-2xl font-bold text-amber-500 mt-1">{driftScore != null ? `${(driftScore * 100).toFixed(1)}%` : '...'}</p>
-        </div>
-        <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-4 text-center">
-          <p className="text-xs text-neutral-500 uppercase tracking-wider font-semibold">Model Accuracy</p>
-          <p className="text-2xl font-bold text-emerald-500 mt-1">88.3%</p>
-        </div>
-        <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-4 text-center">
-          <p className="text-xs text-neutral-500 uppercase tracking-wider font-semibold">Fairness Score</p>
-          <p className="text-2xl font-bold text-blue-500 mt-1">0.83</p>
-        </div>
-        <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-4 text-center">
-          <p className="text-xs text-neutral-500 uppercase tracking-wider font-semibold">Days Since Retrain</p>
-          <p className="text-2xl font-bold text-white mt-1">14</p>
-        </div>
+      {/* Primary Metrics Grid */}
+      <motion.div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6" variants={item}>
+        <MetricCard 
+          label="Operational Drift" 
+          value={driftScore != null ? `${(driftScore * 100).toFixed(1)}%` : '4.2%'} 
+          sub="Within safe limits"
+          color="amber"
+          icon={<Activity size={20} />}
+        />
+        <MetricCard 
+          label="Model Accuracy" 
+          value="88.3%" 
+          sub="+0.4% since last week"
+          color="emerald"
+          icon={<ShieldCheck size={20} />}
+        />
+        <MetricCard 
+          label="Fairness Index" 
+          value="0.83" 
+          sub="Target: > 0.80"
+          color="blue"
+          icon={<TrendingUp size={20} />}
+        />
+        <MetricCard 
+          label="Retrain Cycle" 
+          value="14d" 
+          sub="Next: 16 days"
+          color="neutral"
+          icon={<RefreshCw size={20} />}
+        />
       </motion.div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Drift Chart */}
-        <motion.div className="lg:col-span-2 bg-neutral-900 border border-neutral-800 rounded-xl p-6" variants={item}>
-          <h2 className="text-lg font-semibold text-white mb-1">Drift & Fairness Over Time</h2>
-          <p className="text-sm text-neutral-500 mb-4">40-day monitoring window showing accuracy decay and recovery after retraining</p>
-          <div className="h-72 w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={driftTimeline} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#262626" vertical={false} />
-                <XAxis dataKey="day" stroke="#525252" fontSize={11} tickLine={false} axisLine={false} />
-                <YAxis stroke="#525252" fontSize={11} tickLine={false} axisLine={false} />
-                <Tooltip contentStyle={{ backgroundColor: '#171717', borderColor: '#262626', borderRadius: 8, color: '#f5f5f5' }} />
-                <ReferenceLine y={90} stroke="#f59e0b" strokeDasharray="4 4" label={{ value: 'Min Accuracy', position: 'right', fill: '#f59e0b', fontSize: 10 }} />
-                <Line type="monotone" dataKey="accuracy" stroke="#3b82f6" strokeWidth={2} dot={{ r: 3, fill: '#3b82f6' }} name="Accuracy %" />
-                <Line type="monotone" dataKey="fairness" stroke="#10b981" strokeWidth={2} dot={{ r: 3, fill: '#10b981' }} name="Fairness Score" yAxisId={0} />
-              </LineChart>
-            </ResponsiveContainer>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        {/* Analytics Section */}
+        <motion.div className="lg:col-span-2 space-y-8" variants={item}>
+          <div className="bg-neutral-900/40 backdrop-blur-md border border-neutral-800/50 rounded-3xl p-8 shadow-2xl overflow-hidden relative">
+            <div className="flex items-center justify-between mb-8">
+              <div>
+                <h2 className="text-2xl font-black text-white mb-1">Performance Trajectory</h2>
+                <p className="text-neutral-500 font-medium">Historical accuracy decay and drift monitoring</p>
+              </div>
+              <div className="flex gap-2">
+                <span className="px-3 py-1 bg-blue-500/10 text-blue-400 border border-blue-500/20 rounded-lg text-[10px] font-bold uppercase tracking-widest">40 Days View</span>
+              </div>
+            </div>
+            
+            <div className="h-80 w-full -ml-4">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={driftTimeline} margin={{ top: 5, right: 30, left: 0, bottom: 5 }}>
+                  <defs>
+                    <linearGradient id="colorAcc" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3}/>
+                      <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
+                    </linearGradient>
+                    <linearGradient id="colorFair" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#10b981" stopOpacity={0.3}/>
+                      <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#262626" vertical={false} />
+                  <XAxis dataKey="day" stroke="#525252" fontSize={11} tickLine={false} axisLine={false} tick={{dy: 10}} />
+                  <YAxis stroke="#525252" fontSize={11} tickLine={false} axisLine={false} tick={{dx: -10}} />
+                  <Tooltip 
+                    contentStyle={{ backgroundColor: '#171717', borderColor: '#262626', borderRadius: 12, color: '#f5f5f5', border: '1px solid rgba(255,255,255,0.1)' }} 
+                    itemStyle={{ fontSize: '12px', fontWeight: 'bold' }}
+                  />
+                  <ReferenceLine y={90} stroke="#f59e0b" strokeDasharray="6 6" label={{ value: 'Critical Accuracy', position: 'insideRight', fill: '#f59e0b', fontSize: 10, fontWeight: 'bold' }} />
+                  <Area type="monotone" dataKey="accuracy" stroke="#3b82f6" strokeWidth={3} fillOpacity={1} fill="url(#colorAcc)" name="Accuracy %" />
+                  <Area type="monotone" dataKey="fairness" stroke="#10b981" strokeWidth={3} fillOpacity={1} fill="url(#colorFair)" name="Fairness Score" />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+            
+            <div className="mt-8 pt-6 border-t border-neutral-800/50 flex flex-wrap gap-8">
+              <LegendItem color="bg-blue-500" label="Model Accuracy" sub="System-wide precision" />
+              <LegendItem color="bg-emerald-500" label="Fairness Score" sub="Disparate impact ratio" />
+              <LegendItem color="bg-amber-500" label="Alert Threshold" sub="Min acceptable perf" />
+            </div>
           </div>
-          <div className="mt-3 flex gap-6 text-xs">
-            <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-blue-500"></span> Accuracy</span>
-            <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-emerald-500"></span> Fairness Score</span>
-            <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-amber-500"></span> Min Accuracy Threshold</span>
+
+          {/* Feature Shifts Table */}
+          <div className="bg-neutral-900/40 backdrop-blur-md border border-neutral-800/50 rounded-3xl overflow-hidden shadow-2xl">
+            <div className="p-8 border-b border-neutral-800/50">
+              <h2 className="text-2xl font-black text-white mb-1">Feature Shifts</h2>
+              <p className="text-neutral-500 font-medium">Distributional drift across input dimensions</p>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="bg-neutral-950/30 text-[11px] uppercase tracking-[0.2em] text-neutral-500 border-b border-neutral-800/50">
+                    <th className="px-8 py-5 font-black">Feature</th>
+                    <th className="px-8 py-5 font-black text-center">Drift %</th>
+                    <th className="px-8 py-5 font-black">Severity</th>
+                    <th className="px-8 py-5 font-black">Analysis</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-neutral-800/30">
+                  {featureShifts.map((f) => (
+                    <tr key={f.feature} className="hover:bg-neutral-800/30 transition-all duration-200 group">
+                      <td className="px-8 py-6">
+                        <p className="text-sm font-black text-white group-hover:text-blue-400 transition-colors">{f.feature}</p>
+                      </td>
+                      <td className="px-8 py-6 text-center">
+                        <span className="font-mono text-sm font-bold text-blue-400 bg-blue-400/10 px-3 py-1 rounded-lg border border-blue-400/20">
+                          {f.shift}
+                        </span>
+                      </td>
+                      <td className="px-8 py-6">
+                        <span className={`px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest border shadow-lg ${
+                          f.severity === 'Critical' ? 'bg-rose-500/20 text-rose-400 border-rose-500/30 shadow-rose-500/10' :
+                          f.severity === 'Warning' ? 'bg-amber-500/20 text-amber-400 border-amber-500/30 shadow-amber-500/10' :
+                          'bg-emerald-500/20 text-emerald-400 border-emerald-500/30 shadow-emerald-500/10'
+                        }`}>{f.severity}</span>
+                      </td>
+                      <td className="px-8 py-6">
+                        <p className="text-xs text-neutral-400 font-medium leading-relaxed max-w-xs">{f.detail}</p>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         </motion.div>
 
-        {/* Side Panels */}
-        <div className="space-y-6">
-          <motion.div className="bg-neutral-900 border border-neutral-800 rounded-xl p-6" variants={item}>
-            <h3 className="font-semibold text-white flex items-center gap-2 mb-4">
-              <AlertTriangle size={18} className="text-amber-500" /> Active Alerts
+        {/* Intelligence Sidebar */}
+        <div className="space-y-8">
+          <motion.div className="bg-neutral-900/40 backdrop-blur-md border border-neutral-800/50 rounded-3xl p-8 shadow-2xl relative overflow-hidden" variants={item}>
+            <div className="absolute top-0 left-0 w-1 h-full bg-blue-600/50"></div>
+            <h3 className="text-xl font-black text-white flex items-center gap-3 mb-6">
+              <AlertTriangle size={24} className="text-amber-500" /> Active Surveillance
             </h3>
-            <div className="space-y-3">
-              <div className="border-l-2 border-rose-500 pl-4 py-1">
-                <p className="text-sm font-medium text-white mb-1">Critical: Demographic Drift</p>
-                <p className="text-xs text-neutral-400">Model v2.4 error rate exceeds 8% on Asian demographic class. Immediate retraining recommended.</p>
-              </div>
-              <div className="border-l-2 border-amber-500 pl-4 py-1">
-                <p className="text-sm font-medium text-white mb-1">Warning: Feature Shift</p>
-                <p className="text-xs text-neutral-400">Geographic Region input data distribution shifted 22%. Model may produce unreliable predictions.</p>
-              </div>
-              <div className="border-l-2 border-blue-500 pl-4 py-1">
-                <p className="text-sm font-medium text-white mb-1">Info: Auto-Retrain Scheduled</p>
-                <p className="text-xs text-neutral-400">Scheduled retrain triggered for Day 38. Recovery observed in metrics.</p>
-              </div>
+            <div className="space-y-6">
+              <AlertItem 
+                type="Critical" 
+                title="Demographic Drift" 
+                desc="Model v2.4 error rate exceeds 8% on Asian demographic class. Immediate retraining recommended."
+                time="2h ago"
+              />
+              <AlertItem 
+                type="Warning" 
+                title="Feature Shift" 
+                desc="Geographic Region input data distribution shifted 22%. Model may produce unreliable predictions."
+                time="5h ago"
+              />
+              <AlertItem 
+                type="Info" 
+                title="Auto-Retrain Scheduled" 
+                desc="Scheduled retrain triggered for Day 38. Recovery observed in metrics."
+                time="12h ago"
+              />
             </div>
           </motion.div>
 
-          <motion.div className="bg-neutral-900 border border-neutral-800 rounded-xl p-6" variants={item}>
-            <h3 className="font-semibold text-white mb-4">Retraining Controls</h3>
-            <div className="space-y-2 text-sm">
-              <div className="flex justify-between"><span className="text-neutral-400">Last Retrained</span><span className="text-white">14 Days Ago</span></div>
-              <div className="flex justify-between"><span className="text-neutral-400">Trigger Threshold</span><span className="text-white">&gt; 15% Drift</span></div>
-              <div className="flex justify-between"><span className="text-neutral-400">Auto-Retrain</span><span className="text-emerald-500 font-medium">Enabled</span></div>
+          <motion.div className="bg-gradient-to-br from-neutral-900/60 to-neutral-950 border border-neutral-800/50 rounded-3xl p-8 shadow-2xl" variants={item}>
+            <h3 className="text-xl font-black text-white mb-6">Pipeline Health</h3>
+            <div className="space-y-4 mb-8">
+              <HealthMetric label="Data Ingestion" status="Optimal" color="emerald" />
+              <HealthMetric label="Inference API" status="Optimal" color="emerald" />
+              <HealthMetric label="Monitoring Sink" status="Warning" color="amber" />
+              <HealthMetric label="Retraining Engine" status="Standby" color="blue" />
             </div>
-            <button className="w-full mt-4 bg-blue-600 hover:bg-blue-700 text-white py-2.5 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2">
-              <RefreshCw size={16} /> Force Retrain Now
+            <button onClick={forceRetrain} className="w-full bg-white hover:bg-neutral-200 text-neutral-950 py-4 rounded-2xl text-sm font-black transition-all shadow-[0_0_30px_rgba(255,255,255,0.1)] active:scale-[0.98]">
+              Emergency Retrain
             </button>
           </motion.div>
         </div>
       </div>
-
-      {/* Feature Shift Table */}
-      <motion.div className="bg-neutral-900 border border-neutral-800 rounded-xl overflow-hidden" variants={item}>
-        <div className="p-6 border-b border-neutral-800">
-          <h2 className="text-lg font-semibold text-white">Feature Distribution Shifts</h2>
-          <p className="text-sm text-neutral-400 mt-1">Comparing incoming data distribution against training data baseline</p>
-        </div>
-        <table className="w-full text-left text-sm">
-          <thead className="text-xs uppercase bg-neutral-950 border-b border-neutral-800 text-neutral-500">
-            <tr>
-              <th className="px-6 py-4 font-semibold">Feature</th>
-              <th className="px-6 py-4 font-semibold">Distribution Shift</th>
-              <th className="px-6 py-4 font-semibold">Severity</th>
-              <th className="px-6 py-4 font-semibold">Detail</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-neutral-800/50">
-            {featureShifts.map((f) => (
-              <tr key={f.feature} className="hover:bg-neutral-800/30 transition-colors">
-                <td className="px-6 py-4 text-white font-medium">{f.feature}</td>
-                <td className="px-6 py-4 font-mono text-neutral-300">{f.shift}</td>
-                <td className="px-6 py-4">
-                  <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-                    f.severity === 'Critical' ? 'bg-rose-500/10 text-rose-400' :
-                    f.severity === 'Warning' ? 'bg-amber-500/10 text-amber-400' :
-                    'bg-emerald-500/10 text-emerald-400'
-                  }`}>{f.severity}</span>
-                </td>
-                <td className="px-6 py-4 text-neutral-400">{f.detail}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </motion.div>
     </motion.div>
+  );
+}
+
+function MetricCard({ label, value, sub, color, icon }: any) {
+  const colors: any = {
+    amber: 'text-amber-400 bg-amber-500/10 border-amber-500/20 shadow-amber-500/5',
+    emerald: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20 shadow-emerald-500/5',
+    blue: 'text-blue-400 bg-blue-500/10 border-blue-500/20 shadow-blue-500/5',
+    neutral: 'text-white bg-neutral-500/10 border-neutral-500/20 shadow-neutral-500/5'
+  };
+
+  return (
+    <div className="bg-neutral-900/40 backdrop-blur-md border border-neutral-800/50 rounded-3xl p-6 shadow-xl hover:border-neutral-700/50 transition-all duration-300 group">
+      <div className="flex items-center justify-between mb-4">
+        <span className="text-neutral-500 text-[10px] font-black uppercase tracking-[0.2em]">{label}</span>
+        <div className={`${colors[color]} p-2 rounded-xl border`}>{icon}</div>
+      </div>
+      <p className={`text-4xl font-black mb-1 group-hover:scale-105 transition-transform origin-left ${color === 'neutral' ? 'text-white' : colors[color].split(' ')[0]}`}>{value}</p>
+      <p className="text-xs text-neutral-500 font-bold tracking-tight">{sub}</p>
+    </div>
+  );
+}
+
+function LegendItem({ color, label, sub }: any) {
+  return (
+    <div className="flex items-center gap-3">
+      <div className={`w-3 h-3 rounded-full ${color} shadow-lg`}></div>
+      <div>
+        <p className="text-xs font-black text-white leading-none mb-0.5">{label}</p>
+        <p className="text-[10px] text-neutral-500 font-bold uppercase tracking-widest">{sub}</p>
+      </div>
+    </div>
+  );
+}
+
+function AlertItem({ type, title, desc, time }: any) {
+  const styles: any = {
+    Critical: 'border-rose-500/50 bg-rose-500/5 text-rose-400',
+    Warning: 'border-amber-500/50 bg-amber-500/5 text-amber-400',
+    Info: 'border-blue-500/50 bg-blue-500/5 text-blue-400'
+  };
+
+  return (
+    <div className={`border-l-4 ${styles[type].split(' ')[0]} ${styles[type].split(' ').slice(1).join(' ')} pl-5 py-3 rounded-r-2xl transition-all hover:bg-opacity-10 cursor-pointer group`}>
+      <div className="flex justify-between items-start mb-1">
+        <p className={`text-sm font-black ${styles[type].split(' ')[2]}`}>{type}: {title}</p>
+        <span className="text-[10px] text-neutral-500 font-bold">{time}</span>
+      </div>
+      <p className="text-xs text-neutral-400 font-medium leading-relaxed group-hover:text-neutral-300 transition-colors">{desc}</p>
+    </div>
+  );
+}
+
+function HealthMetric({ label, status, color }: any) {
+  const colors: any = {
+    emerald: 'bg-emerald-500 shadow-emerald-500/20 text-emerald-400',
+    amber: 'bg-amber-500 shadow-amber-500/20 text-amber-400',
+    blue: 'bg-blue-500 shadow-blue-500/20 text-blue-400'
+  };
+
+  return (
+    <div className="flex items-center justify-between group">
+      <span className="text-sm text-neutral-400 font-bold group-hover:text-neutral-200 transition-colors">{label}</span>
+      <div className="flex items-center gap-2">
+        <span className={`text-[10px] font-black uppercase tracking-widest ${colors[color].split(' ')[2]}`}>{status}</span>
+        <div className={`w-2 h-2 rounded-full ${colors[color].split(' ')[0]} ${colors[color].split(' ')[1]}`}></div>
+      </div>
+    </div>
   );
 }

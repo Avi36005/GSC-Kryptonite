@@ -31,3 +31,6 @@ Thumbs.db
 
 # Temp uploads (server)
 server/uploads/
+
+# Test / scratch scripts
+server/scratch/

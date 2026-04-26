@@ -1,4 +1,4 @@
-const API_BASE = 'http://localhost:5000/api';
+export const API_BASE = 'http://localhost:5001/api';
 
 export const api = {
   async analyzeDecision(id: string, features: Record<string, unknown>, prediction: string, domain: string) {
@@ -20,8 +20,8 @@ export const api = {
     return res.json();
   },
 
-  async getDriftData() {
-    const res = await fetch(`${API_BASE}/drift-data`);
+  async getDriftAnalysis(domain: string) {
+    const res = await fetch(`${API_BASE}/drift?domain=${encodeURIComponent(domain)}`);
     return res.json();
   },
 
@@ -136,6 +136,28 @@ export const api = {
       throw new Error(errorData.error || `Server error: ${res.status}`);
     }
 
+    return res.json();
+  },
+
+  async getDashboardInsights() {
+    const res = await fetch(`${API_BASE}/dashboard-insights`);
+    if (!res.ok) {
+      throw new Error(`Failed to fetch dashboard insights: ${res.status}`);
+    }
+    return res.json();
+  },
+
+  async getSystemStatus() {
+    const res = await fetch(`${API_BASE}/system/status`);
+    return res.json();
+  },
+
+  async toggleHalt(halt: boolean) {
+    const res = await fetch(`${API_BASE}/system/halt`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ halt }),
+    });
     return res.json();
   },
 };

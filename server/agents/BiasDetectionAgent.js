@@ -1,13 +1,14 @@
-import { GoogleGenAI } from '@google/genai';
-import dotenv from 'dotenv';
-dotenv.config({ path: '../.env' });
+/**
+ * BiasDetectionAgent.js
+ * Uses Gemini 2.5 Pro (Vertex AI) — deep reasoning for bias detection.
+ */
 
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || 'dummy_key_to_prevent_crash' });
-const model = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
+import { geminiPro } from '../services/geminiClient.js';
 
 export class BiasDetectionAgent {
   /**
-   * Scans an AI's input features against its predicted outcome to identify potential bias/disparate impact.
+   * Scans an AI's input features against its predicted outcome to identify
+   * potential bias / disparate impact.
    */
   async analyzeDecision(features, prediction, domainConfig) {
     try {
@@ -26,23 +27,49 @@ Respond strictly in JSON format:
   "reasoning": string
 }`;
 
-      const response = await ai.models.generateContent({
-        model: model,
-        contents: prompt
-      });
+      const responseText = await geminiPro(prompt);
 
-      const responseText = response.text || '';
-      // Parse the JSON out of the response string (handling potential markdown blocks)
       const jsonMatch = responseText.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
-         return JSON.parse(jsonMatch[0]);
+        return JSON.parse(jsonMatch[0]);
       }
-      
-      return { isBiased: false, confidenceScore: 0, flaggedFeatures: [], reasoning: "Failed to parse API logic correctly." };
 
+      return this.runRuleBasedCheck(features, domainConfig, 'Failed to parse API logic correctly.');
     } catch (error) {
-      console.error("BiasDetectionAgent Error:", error);
-      return { isBiased: false, confidenceScore: 0, flaggedFeatures: [], reasoning: "Error connecting to AI inference." };
+      console.error('BiasDetectionAgent Error:', error);
+      return this.runRuleBasedCheck(features, domainConfig, 'Error connecting to Vertex AI inference.');
     }
+  }
+
+  /**
+   * Deterministic fallback: Checks features against domain-specific forbidden rules.
+   */
+  runRuleBasedCheck(features, domainConfig, originalReason) {
+    console.warn(`[BiasDetectionAgent] Falling back to rule-based engine for ${domainConfig.name}. Reason: ${originalReason}`);
+    
+    const flaggedFeatures = [];
+    const featureKeys = Object.keys(features);
+
+    if (domainConfig.rules) {
+      domainConfig.rules.forEach(rule => {
+        rule.targetFeatures.forEach(target => {
+          if (featureKeys.includes(target)) {
+            flaggedFeatures.push(target);
+          }
+        });
+      });
+    }
+
+    const uniqueFlagged = [...new Set(flaggedFeatures)];
+
+    return {
+      isBiased: uniqueFlagged.length > 0,
+      confidenceScore: uniqueFlagged.length > 0 ? 100 : 0, // Deterministic
+      flaggedFeatures: uniqueFlagged,
+      reasoning: uniqueFlagged.length > 0 
+        ? `Rule-based engine detected prohibited proxies: ${uniqueFlagged.join(', ')}. (${originalReason})`
+        : `Deterministic scan found no prohibited proxies. (${originalReason})`,
+      engine: 'RULE_BASED_FALLBACK'
+    };
   }
 }

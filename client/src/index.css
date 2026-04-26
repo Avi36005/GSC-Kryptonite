@@ -1,60 +1,80 @@
-@import "tailwindcss";
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Outfit:wght@400;500;600;700;800;900&display=swap');
 
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
-@layer base {
-  :root {
-    --color-background: #0a0a0a;
-    --color-foreground: #fafafa;
-    --color-surface: #171717;
-    --color-border: #262626;
-    --color-accent: #3b82f6;
-  }
-
-  * {
-    scrollbar-width: thin;
-    scrollbar-color: #262626 transparent;
-  }
-
-  *::-webkit-scrollbar {
-    width: 6px;
-    height: 6px;
-  }
-
-  *::-webkit-scrollbar-track {
-    background: transparent;
-  }
-
-  *::-webkit-scrollbar-thumb {
-    background-color: #262626;
-    border-radius: 20px;
-  }
+:root {
+  --font-inter: 'Inter', sans-serif;
+  --font-outfit: 'Outfit', sans-serif;
 }
 
 body {
-  font-family: 'Inter', system-ui, -apple-system, sans-serif;
-  @apply bg-neutral-950 text-neutral-50 antialiased;
+  margin: 0;
+  padding: 0;
+  background-color: #000000;
+  color: #ffffff;
+  font-family: var(--font-inter);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-/* Chart tooltip customization */
-.recharts-tooltip-wrapper {
-  outline: none !important;
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-outfit);
 }
 
-/* Smooth page transitions */
-main {
-  scroll-behavior: smooth;
+/* Custom Scrollbar - Premium Dark */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 4px;
 }
 
-/* Glow effects for critical elements */
-.glow-blue {
-  box-shadow: 0 0 20px rgba(59, 130, 246, 0.15);
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: #000000;
 }
 
-.glow-red {
-  box-shadow: 0 0 20px rgba(239, 68, 68, 0.15);
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #1a1a1a;
+  border-radius: 10px;
 }
 
-.glow-green {
-  box-shadow: 0 0 20px rgba(16, 185, 129, 0.15);
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #ffffff;
+}
+
+/* Prose overrides for premium look */
+.prose {
+  color: #a3a3a3 !important;
+}
+
+.prose strong {
+  color: #ffffff !important;
+  font-weight: 800 !important;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.prose code {
+  background: #111 !important;
+  color: #fff !important;
+  padding: 0.2em 0.4em !important;
+  border-radius: 3px !important;
+  font-size: 0.9em !important;
+}
+
+/* Global Selection */
+::selection {
+  background: #ffffff;
+  color: #000000;
+}
+
+/* Animations */
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.animate-shimmer {
+  background: linear-gradient(90deg, #000 0%, #111 50%, #000 100%);
+  background-size: 200% 100%;
+  animation: shimmer 2s infinite linear;
 }

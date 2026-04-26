@@ -2,12 +2,12 @@ import express from 'express';
 import multer from 'multer';
 import { parse } from 'csv-parse/sync';
 import { stringify } from 'csv-stringify/sync';
-import { GoogleGenAI } from '@google/genai';
 import { getDomainConfig } from '../domains/index.js';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
+import { geminiPro } from '../services/geminiClient.js';
 
 dotenv.config({ path: '../.env' });
 
@@ -16,9 +16,7 @@ const __dirname = path.dirname(__filename);
 
 const router = express.Router();
 
-// Configure Gemini
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || 'dummy_key' });
-const modelName = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
+// Vertex AI — Gemini 2.5 Pro for deep dataset analysis & debiasing
 
 // Configure multer for CSV uploads
 const uploadsDir = path.join(__dirname, '..', 'uploads');
@@ -215,12 +213,8 @@ Respond ONLY with valid JSON in this exact structure (no markdown, no extra text
   ]
 }`;
 
-    const response = await ai.models.generateContent({
-      model: modelName,
-      contents: prompt,
-    });
-
-    const responseText = response.text || '';
+    // Gemini 2.5 Pro via Vertex AI (ADC) — deep dataset analysis
+    const responseText = await geminiPro(prompt);
 
     // Parse the JSON from Gemini's response
     let biasReport;
@@ -354,12 +348,8 @@ IMPORTANT:
 - Focus on removing proxy variables, anonymizing PII, and generalizing sensitive categories.
 - Each transformation must reference actual column names from the dataset.`;
 
-    const response = await ai.models.generateContent({
-      model: modelName,
-      contents: prompt,
-    });
-
-    const responseText = response.text || '';
+    // Gemini 2.5 Pro via Vertex AI (ADC) — deep debiasing reasoning
+    const responseText = await geminiPro(prompt);
     let instructions;
     try {
       const jsonMatch = responseText.match(/\{[\s\S]*\}/);
@@ -578,12 +568,8 @@ Respond ONLY with valid JSON in this exact structure (no markdown, no extra text
   ]
 }`;
 
-    const response = await ai.models.generateContent({
-      model: modelName,
-      contents: prompt,
-    });
-
-    const responseText = response.text || '';
+    // Gemini 2.5 Pro via Vertex AI (ADC) — deep analysis
+    const responseText = await geminiPro(prompt);
     let biasReport;
     try {
       const jsonMatch = responseText.match(/\{[\s\S]*\}/);

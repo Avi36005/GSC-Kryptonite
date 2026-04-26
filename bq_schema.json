@@ -1,0 +1,20 @@
+[
+  {"name": "decisionId", "type": "STRING", "mode": "NULLABLE"},
+  {"name": "timestamp", "type": "TIMESTAMP", "mode": "NULLABLE"},
+  {"name": "domain", "type": "STRING", "mode": "NULLABLE"},
+  {"name": "finalOutcome", "type": "STRING", "mode": "NULLABLE"},
+  {"name": "originalDecision", "type": "STRING", "mode": "NULLABLE"},
+  {"name": "reasons", "type": "STRING", "mode": "REPEATED"},
+  {
+    "name": "biasReport",
+    "type": "RECORD",
+    "mode": "NULLABLE",
+    "fields": [
+      {"name": "hasBias", "type": "BOOLEAN", "mode": "NULLABLE"},
+      {"name": "biasType", "type": "STRING", "mode": "NULLABLE"},
+      {"name": "confidenceScore", "type": "FLOAT", "mode": "NULLABLE"},
+      {"name": "affectedGroups", "type": "STRING", "mode": "REPEATED"},
+      {"name": "recommendedAction", "type": "STRING", "mode": "NULLABLE"}
+    ]
+  }
+]

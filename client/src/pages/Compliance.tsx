@@ -1,6 +1,8 @@
 import { FileText, ShieldCheck, AlertCircle, FileCheck2, Globe, ExternalLink } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useEffect, useState } from 'react';
+import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
 import { api } from '../services/api';
 import { useDomain } from '../context/DomainContext';
 
@@ -36,14 +38,33 @@ export default function Compliance() {
     }).catch(() => {});
   }, [activeDomain]);
 
+  const handleExportPDF = async () => {
+    const element = document.getElementById('compliance-content');
+    if (!element) return;
+
+    try {
+      const canvas = await html2canvas(element, { scale: 2 });
+      const imgData = canvas.toDataURL('image/png');
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+      
+      pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+      pdf.save(`compliance-report-${domainConfig?.name || activeDomain}.pdf`);
+    } catch (err) {
+      console.error('Failed to export PDF:', err);
+      alert('Failed to generate PDF report.');
+    }
+  };
+
   return (
-    <motion.div className="space-y-6" variants={container} initial="hidden" animate="show">
+    <motion.div id="compliance-content" className="space-y-6" variants={container} initial="hidden" animate="show">
       <motion.header className="mb-2 flex justify-between items-center" variants={item}>
         <div>
           <h1 className="text-3xl font-bold text-white">Compliance Mapping</h1>
           <p className="text-neutral-400">Automated regulatory alignment monitoring across global jurisdictions for the {domainConfig?.name || activeDomain} layer.</p>
         </div>
-        <button className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 font-medium transition-colors">
+        <button onClick={handleExportPDF} className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 font-medium transition-colors">
           <FileCheck2 size={18} /> Generate Compliance Report
         </button>
       </motion.header>
@@ -84,7 +105,7 @@ export default function Compliance() {
                 <p className="text-xs text-neutral-400 mt-1 leading-relaxed">{reg.description}</p>
                 <p className="text-xs text-neutral-600 mt-2">Last scan: {reg.lastCheck}</p>
               </div>
-              <button className="mt-auto text-xs text-blue-500 hover:text-blue-400 flex items-center gap-1 transition-colors">
+              <button onClick={() => alert(`Opening full report for ${reg.title}...`)} className="mt-auto text-xs text-blue-500 hover:text-blue-400 flex items-center gap-1 transition-colors">
                 View Full Report <ExternalLink size={12} />
               </button>
             </motion.div>

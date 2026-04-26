@@ -1,4 +1,4 @@
-import { ShieldAlert, Play, AlertTriangle, Send } from 'lucide-react';
+import { ShieldAlert, Play, AlertTriangle, Send, Wand2, ActivitySquare, FileCheck } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useEffect, useState, useRef } from 'react';
 import { socket } from '../services/socket';
@@ -22,6 +22,8 @@ interface DecisionEvent {
     violations: { framework: string; rule: string; severity: string }[];
   };
   explanation: string;
+  engine?: string;
+  status?: string;
 }
 
 const SAMPLE_SCENARIOS = [
@@ -35,17 +37,58 @@ export default function Interceptor() {
   const [events, setEvents] = useState<DecisionEvent[]>([]);
   const [selectedEvent, setSelectedEvent] = useState<DecisionEvent | null>(null);
   const [sending, setSending] = useState(false);
+  const [fixing, setFixing] = useState(false);
+  const [autoFixResult, setAutoFixResult] = useState<any>(null);
+  const [isHalted, setIsHalted] = useState(false);
   const feedRef = useRef<HTMLDivElement>(null);
   const { activeDomain, domainConfig } = useDomain();
   
   const activeScenarios = domainConfig?.scenarios || [];
 
+  const handleAutoFix = async () => {
+    if (!selectedEvent) return;
+    setFixing(true);
+    setAutoFixResult(null);
+    try {
+      const res = await fetch(`${api.API_BASE}/autofix`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          decisionId: selectedEvent.decisionId,
+          features: (selectedEvent as any).features || { age: 34, income: 55000, zip_code: '90210' },
+          prediction: selectedEvent.originalPrediction,
+          biasReport: selectedEvent.biasReport,
+          complianceReport: selectedEvent.complianceReport,
+          domain: activeDomain
+        })
+      });
+      const data = await res.json();
+      setAutoFixResult(data);
+    } catch (error) {
+      console.error(error);
+    }
+    setFixing(false);
+  };
+
   useEffect(() => {
+    // Initial fetch
+    api.getSystemStatus().then(status => {
+      setIsHalted(status.halt);
+    });
+
     socket.on('new_decision_intercepted', (data: DecisionEvent) => {
       setEvents((prev) => [...prev, data]);
       setSelectedEvent(data);
     });
-    return () => { socket.off('new_decision_intercepted'); };
+
+    socket.on('system_status_change', (status: { halt: boolean }) => {
+      setIsHalted(status.halt);
+    });
+
+    return () => { 
+      socket.off('new_decision_intercepted'); 
+      socket.off('system_status_change');
+    };
   }, []);
 
   useEffect(() => {
@@ -57,9 +100,9 @@ export default function Interceptor() {
   const sendScenario = async (scenario: any) => {
     setSending(true);
     try {
-      // Mock features based on domain for demonstration
-      const mockFeatures = { age: 34, income: 55000, zip_code: '90210', club_membership: 'vip' };
-      const result = await api.analyzeDecision(scenario.id, mockFeatures, scenario.action, activeDomain);
+      // Use features from scenario if available, else fallback
+      const features = scenario.features || { age: 34, income: 55000, zip_code: '90210', club_membership: 'vip' };
+      const result = await api.analyzeDecision(scenario.id, features, scenario.action, activeDomain);
       setEvents((prev) => [...prev, result]);
       setSelectedEvent(result);
     } catch (err) {
@@ -68,30 +111,58 @@ export default function Interceptor() {
     setSending(false);
   };
 
+  const handleHaltToggle = async () => {
+    try {
+      const result = await api.toggleHalt(!isHalted);
+      setIsHalted(result.halt);
+    } catch (err) {
+      console.error('Failed to toggle halt:', err);
+    }
+  };
+
   return (
-    <motion.div className="space-y-6" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-      <header className="flex justify-between items-center">
+    <motion.div className="space-y-8" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
+      <header className="flex justify-between items-end pb-2">
         <div>
-          <h1 className="text-3xl font-bold text-white">Decision Interceptor</h1>
-          <p className="text-neutral-400">Live feed of AI inferences evaluated by the multi-agent pipeline.</p>
+          <h1 className="text-4xl font-extrabold text-white tracking-tight mb-1">
+            Decision <span className="text-blue-500">Interceptor</span>
+          </h1>
+          <p className="text-neutral-400 max-w-2xl">
+            Live evaluation of AI inferences through our proprietary multi-agent governance pipeline. 
+            Real-time bias detection and automated policy enforcement.
+          </p>
         </div>
-        <button className="bg-rose-500 hover:bg-rose-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 font-medium transition-colors">
-          <AlertTriangle size={18} /> Emergency Halt
-        </button>
+        <div className="flex gap-3">
+          <button 
+            onClick={handleHaltToggle}
+            className={`${isHalted ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-rose-500/10 text-rose-400 border-rose-500/20'} border px-5 py-2.5 rounded-xl flex items-center gap-2 font-semibold transition-all hover:scale-105 active:scale-95`}
+          >
+            {isHalted ? <Play size={18} fill="currentColor" /> : <AlertTriangle size={18} fill="currentColor" />}
+            {isHalted ? 'Resume Protection' : 'Emergency Halt'}
+          </button>
+        </div>
       </header>
 
       {/* Scenario Buttons */}
-      <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-4">
-        <h3 className="text-sm font-semibold text-neutral-400 uppercase tracking-wider mb-3">Send Test Scenario ({domainConfig?.name || activeDomain})</h3>
-        <div className="flex flex-wrap gap-3">
+      <div className="glass rounded-2xl p-6 border border-white/5 relative overflow-hidden">
+        <div className="absolute top-0 right-0 p-8 opacity-5">
+          <Send size={120} className="rotate-12" />
+        </div>
+        <h3 className="text-xs font-bold text-neutral-500 uppercase tracking-[0.2em] mb-4">Injection Console: {domainConfig?.name || activeDomain}</h3>
+        <div className="flex flex-wrap gap-3 relative z-10">
           {activeScenarios.map((s) => (
             <button
               key={s.id}
               disabled={sending}
               onClick={() => sendScenario(s)}
-              className="bg-neutral-800 hover:bg-neutral-700 disabled:opacity-50 text-white px-4 py-2 rounded-lg text-sm flex items-center gap-2 transition-colors border border-neutral-700"
+              className="bg-neutral-800/50 hover:bg-neutral-700/50 disabled:opacity-50 text-white px-5 py-2.5 rounded-xl text-sm flex items-center gap-3 transition-all border border-white/5 hover:border-white/10 card-hover group"
             >
-              <Send size={14} /> {s.id} — {s.action}
+              <div className="w-6 h-6 rounded-lg bg-blue-500/10 flex items-center justify-center group-hover:bg-blue-500/20 transition-colors">
+                <Send size={12} className="text-blue-400" />
+              </div>
+              <span className="font-medium">{s.id}</span>
+              <span className="text-neutral-500">—</span>
+              <span className="text-neutral-300 italic">{s.action}</span>
             </button>
           ))}
         </div>
@@ -99,41 +170,58 @@ export default function Interceptor() {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Live Feed */}
-        <div className="bg-neutral-900 border border-neutral-800 rounded-xl flex flex-col">
-          <div className="p-4 border-b border-neutral-800 flex justify-between items-center">
-            <h2 className="font-semibold text-white">Live Stream</h2>
-            <span className="flex items-center gap-2 text-xs text-emerald-500 bg-emerald-500/10 px-2.5 py-1 rounded-full font-medium">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span> Listening
+        <div className="glass rounded-2xl border border-white/5 flex flex-col overflow-hidden">
+          <div className="p-5 border-b border-white/5 flex justify-between items-center bg-white/[0.02]">
+            <h2 className="font-bold text-white flex items-center gap-2">
+              <ActivitySquare size={18} className="text-blue-500" />
+              Live Monitoring Stream
+            </h2>
+            <span className="flex items-center gap-2 text-[10px] text-emerald-400 bg-emerald-500/10 px-3 py-1.5 rounded-full font-bold uppercase tracking-widest border border-emerald-500/20">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span> Protected
             </span>
           </div>
-          <div ref={feedRef} className="flex-1 p-4 font-mono text-sm text-neutral-400 space-y-3 overflow-y-auto max-h-[500px]">
+          <div ref={feedRef} className="flex-1 p-5 font-mono text-sm space-y-4 overflow-y-auto max-h-[600px] scrollbar-hide">
             {events.length === 0 && (
-              <div className="text-center text-neutral-600 py-12">
-                <Play size={32} className="mx-auto mb-3 opacity-40" />
-                <p>No events yet. Click a scenario above to begin interception.</p>
+              <div className="text-center text-neutral-600 py-24 flex flex-col items-center">
+                <div className="w-16 h-16 rounded-full bg-neutral-900 flex items-center justify-center mb-4 border border-white/5">
+                  <Play size={24} className="opacity-20 ml-1" />
+                </div>
+                <p className="max-w-[200px] text-xs uppercase tracking-widest font-semibold opacity-40">Awaiting Data Ingestion...</p>
               </div>
             )}
             <AnimatePresence>
               {events.map((ev, i) => (
                 <motion.div
                   key={`${ev.decisionId}-${i}`}
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  className={`p-3 rounded border cursor-pointer transition-colors ${
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className={`p-4 rounded-xl border cursor-pointer transition-all ${
                     ev.finalOutcome === 'INTERCEPTED'
-                      ? 'border-rose-900/40 bg-rose-950/20 hover:bg-rose-950/30'
-                      : 'border-neutral-800 bg-neutral-950 hover:bg-neutral-900'
-                  } ${selectedEvent?.decisionId === ev.decisionId && selectedEvent?.timestamp === ev.timestamp ? 'ring-1 ring-blue-500' : ''}`}
+                      ? 'border-rose-500/30 bg-rose-500/[0.03] hover:bg-rose-500/[0.06]'
+                      : 'border-white/5 bg-white/[0.02] hover:bg-white/[0.05]'
+                  } ${selectedEvent?.decisionId === ev.decisionId && selectedEvent?.timestamp === ev.timestamp ? 'ring-2 ring-blue-500/50 border-blue-500/50' : ''}`}
                   onClick={() => setSelectedEvent(ev)}
                 >
-                  <div className="flex justify-between mb-1">
-                    <span className="text-white">[{ev.finalOutcome === 'INTERCEPTED' ? 'WARN' : 'INFO'}] {ev.decisionId}</span>
-                    <span className="text-neutral-600">{new Date(ev.timestamp).toLocaleTimeString()}</span>
+                  <div className="flex justify-between items-center mb-2">
+                    <div className="flex items-center gap-2">
+                      <div className={`w-2 h-2 rounded-full ${ev.finalOutcome === 'INTERCEPTED' ? 'bg-rose-500' : 'bg-emerald-500'}`}></div>
+                      <span className="text-white font-bold">{ev.decisionId}</span>
+                    </div>
+                    <span className="text-[10px] text-neutral-500 font-medium">{new Date(ev.timestamp).toLocaleTimeString()}</span>
                   </div>
-                  <div className={`font-bold flex items-center gap-1.5 ${ev.finalOutcome === 'INTERCEPTED' ? 'text-rose-500' : 'text-emerald-500'}`}>
-                    {ev.finalOutcome === 'INTERCEPTED' && <ShieldAlert size={13} />}
-                    {ev.finalOutcome === 'INTERCEPTED' ? 'INTERCEPTED — Bias Detected' : 'PASS — Decision approved'}
+                  <div className={`text-xs font-bold flex items-center gap-2 ${ev.finalOutcome === 'INTERCEPTED' ? 'text-rose-400' : 'text-emerald-400'}`}>
+                    {ev.finalOutcome === 'INTERCEPTED' ? <ShieldAlert size={14} /> : <FileCheck size={14} />}
+                    {ev.status === 'BYPASS_FAIL_SAFE' ? 'SYSTEM OVERRIDE — Guardrail Offline' : 
+                     ev.finalOutcome === 'INTERCEPTED' ? 'GUARD INTERCEPT — Bias Triggered' : 'CLEAR — Policy Compliant'}
                   </div>
+                  {ev.engine && (
+                    <div className="mt-3 pt-3 border-t border-white/5 flex items-center justify-between">
+                      <span className="text-[9px] text-neutral-500 uppercase tracking-[0.2em] font-bold">Processor</span>
+                      <span className={`text-[9px] px-2 py-0.5 rounded-md font-bold uppercase tracking-wider ${ev.engine === 'RULE_BASED_COMPLIANCE' ? 'text-amber-400 bg-amber-500/10 border border-amber-500/20' : 'text-blue-400 bg-blue-500/10 border border-blue-500/20'}`}>
+                        {ev.engine === 'RULE_BASED_COMPLIANCE' ? 'Rule Engine' : 'Vertex AI Multi-Agent'}
+                      </span>
+                    </div>
+                  )}
                 </motion.div>
               ))}
             </AnimatePresence>
@@ -221,6 +309,47 @@ export default function Interceptor() {
                   </div>
                 </div>
               </div>
+
+              {selectedEvent.finalOutcome === 'INTERCEPTED' && (
+                <div className="mt-6 pt-6 border-t border-neutral-800">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-lg font-semibold text-white flex items-center gap-2">
+                      <Wand2 className="text-blue-500" size={20} /> Auto Bias Fix Engine
+                    </h3>
+                    <button
+                      onClick={handleAutoFix}
+                      disabled={fixing}
+                      className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
+                    >
+                      {fixing ? <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span> : <Wand2 size={16} />}
+                      {fixing ? 'Generating Fix...' : 'Generate Compliance Fix'}
+                    </button>
+                  </div>
+
+                  {autoFixResult && (
+                    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="bg-blue-500/10 border border-blue-500/20 rounded-xl p-5">
+                      <div className="grid grid-cols-2 gap-4 mb-4">
+                        <div>
+                          <span className="text-xs text-blue-400/70 uppercase tracking-wider font-semibold">New Prediction</span>
+                          <div className="text-blue-400 mt-1 font-bold">{autoFixResult.correctedPrediction}</div>
+                        </div>
+                        <div>
+                          <span className="text-xs text-blue-400/70 uppercase tracking-wider font-semibold">Features Removed</span>
+                          <div className="flex gap-2 mt-1">
+                            {autoFixResult.removedFeatures?.map((f: string) => (
+                              <span key={f} className="text-xs bg-blue-500/20 text-blue-300 px-2 py-0.5 rounded border border-blue-500/30 font-mono">{f}</span>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                      <div>
+                        <span className="text-xs text-blue-400/70 uppercase tracking-wider font-semibold">Correction Explanation</span>
+                        <p className="text-blue-100 mt-1 text-sm">{autoFixResult.correctionExplanation}</p>
+                      </div>
+                    </motion.div>
+                  )}
+                </div>
+              )}
             </motion.div>
           )}
         </div>

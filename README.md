@@ -24,7 +24,8 @@
 - [🏗️ System Architecture](#️-system-architecture)
 - [⚙️ Data Processing Pipeline](#️-data-processing-pipeline)
 - [🤖 Multi-Agent System](#-multi-agent-system)
-- [☁️ Google Cloud Services Used](#️-google-cloud-services-used)
+- [☁️ Google Cloud Services Used](#-google-cloud-services-used)
+- [🛠️ Tech Stack](#️-tech-stack)
 - [🗂️ Project Structure](#️-project-structure)
 - [🖥️ Getting Started](#️-getting-started)
 - [📄 License](#-license)
@@ -35,7 +36,7 @@
 
 **FairAI Guardian** is a full-stack AI governance platform built for the **Google Solution Challenge 2026**. It acts as a real-time middleware that sits between AI models and their consumers, intercepting every automated decision, detecting bias, ensuring legal compliance, and providing explainable, auditable outcomes — all powered by **Google's Gemini 2.5** family of models via **Vertex AI**.
 
-> **Tagline:** _"Compliance by Design — The world's first AI-powered auditor with deep system awareness."_
+> _"Automate fairness, explainability, and regulatory adherence in real-time."_
 
 ---
 
@@ -231,6 +232,36 @@ FairAI Guardian uses a **7-agent architecture**, each with a specialized role:
 | **Cloud Run** | Containerized backend deployment with auto-scaling |
 | **Firebase Hosting** | Global CDN for the React frontend with SPA rewrites |
 | **Application Default Credentials** | Unified auth — no API keys, service accounts in production |
+
+---
+
+## 🛠️ Tech Stack
+
+FairAI Guardian is built using a modern, scalable, and high-performance stack:
+
+### **Frontend (Client)**
+*   **Core**: [React 19](https://react.dev/) + [TypeScript](https://www.typescriptlang.org/)
+*   **Build Tool**: [Vite 8](https://vitejs.dev/)
+*   **Styling**: [Tailwind CSS 4](https://tailwindcss.com/)
+*   **Animations**: [Framer Motion 12](https://www.framer.com/motion/)
+*   **Charts**: [Recharts 3](https://recharts.org/)
+*   **Icons**: [Lucide React](https://lucide.dev/)
+*   **Real-time**: [Socket.IO Client](https://socket.io/)
+
+### **Backend (Server)**
+*   **Core**: [Node.js 18+](https://nodejs.org/) + [Express 5](https://expressjs.com/)
+*   **AI Integration**: [Vertex AI SDK](https://cloud.google.com/vertex-ai) + [@google/genai](https://www.npmjs.com/package/@google/genai)
+*   **Real-time**: [Socket.IO](https://socket.io/)
+*   **Data Parsing**: [csv-parse](https://csv.js.org/parse/) & [multer](https://github.com/expressjs/multer)
+*   **Middleware**: [Morgan](https://github.com/expressjs/morgan) (Logging), [Express Rate Limit](https://www.npmjs.com/package/express-rate-limit)
+
+### **Database & Cloud (GCP)**
+*   **Database**: [Cloud Firestore](https://cloud.google.com/firestore) (NoSQL)
+*   **Analytics**: [BigQuery](https://cloud.google.com/bigquery) (Data Warehouse)
+*   **Streaming**: [Cloud Pub/Sub](https://cloud.google.com/pubsub) (Event Bus)
+*   **Compute**: [Cloud Run](https://cloud.google.com/run) (Serverless Containers)
+*   **Hosting**: [Firebase Hosting](https://firebase.google.com/docs/hosting)
+*   **Authentication**: [Firebase Admin SDK](https://firebase.google.com/docs/admin)
 
 ---
 

@@ -42,26 +42,20 @@
 
 ## 👥 Team Kryptonite
 
-| Name | Role |
-|---|---|
-| **Hardik Hinduja** | Team Lead |
-| **Sahil Deshmukh** | Backend & Cloud |
-| **Siddharth Dey** | AI/ML & Agents |
-| **Avinash Gehi** | Full-Stack & DevOps |
+| Name |
+|---|
+| **Hardik Hinduja** |
+| **Sahil Deshmukh** |
+| **Siddharth Dey** |
+| **Avinash Gehi** |
 
 ---
 
 ## 🧠 Problem Statement
 
-AI systems are increasingly making high-stakes decisions in hiring, finance, healthcare, education, and government — yet most operate as opaque black boxes with no accountability layer. This leads to:
+**Unbiased AI Decision — Ensuring Fairness and Detecting Bias in Automated Decisions**
 
-- **Systemic bias** amplified at scale (racial, gender, age discrimination)
-- **Regulatory non-compliance** with frameworks like the EU AI Act, GDPR, and Title VII
-- **Zero explainability** — affected individuals cannot understand _why_ a decision was made
-- **No audit trail** — organizations lack tamper-proof records of AI decision-making
-- **Data drift** — model behavior degrades silently over time without monitoring
-
-**The cost of unchecked AI bias is real:** wrongful rejections, denied healthcare, unfair sentencing, and discriminatory lending — affecting millions of people globally.
+Computer programs now make life-changing decisions about who gets a job, a bank loan, or even medical care. However, if these programs learn from flawed or unfair historical data, they will repeat and amplify those exact same discriminatory mistakes.
 
 ---
 

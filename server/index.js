@@ -38,12 +38,14 @@ import csvRoutes from './routes/csvAnalysis.js';
 import chatRoutes from './routes/chat.js';
 import autofixRoutes from './routes/autofix.js';
 import insightsRoutes from './routes/insights.js';
+import bigqueryRoutes from './routes/bigquery.js';
 
 app.use('/api', apiRoutes);
 app.use('/api', csvRoutes);
 app.use('/api', chatRoutes);
 app.use('/api', autofixRoutes);
 app.use('/api', insightsRoutes);
+app.use('/api', bigqueryRoutes);
 
 // Socket.io Connection Logic
 io.on('connection', (socket) => {
@@ -57,13 +59,34 @@ io.on('connection', (socket) => {
 // Pass io to routes if needed
 app.set('io', io);
 
+// GCP Service imports (initializes connections on startup)
+import { firestoreService } from './services/firestoreService.js';
+import { bigqueryService } from './services/bigqueryService.js';
+import { pubsubService } from './services/pubsubService.js';
+
 // Default Route
 app.get('/', (req, res) => {
   res.send('FairAI Guardian API is running.');
+});
+
+// GCP Health Check — shows real connection status of all services
+app.get('/api/health', (req, res) => {
+  res.json({
+    status: 'running',
+    project: process.env.GCP_PROJECT_ID || 'fairai-494213-f8',
+    services: {
+      firestore: { connected: firestoreService.isConnected() },
+      bigquery: { connected: bigqueryService.isConnected() },
+      pubsub: { connected: pubsubService.isConnected() },
+      vertexAI: { configured: true, project: process.env.VERTEX_PROJECT_ID || 'fairai-494213-f8' },
+    },
+    timestamp: new Date().toISOString(),
+  });
 });
 
 // Start Server
 const PORT = process.env.PORT || 5001;
 server.listen(PORT, () => {
   console.log(`FairAI Guardian server running on port ${PORT}`);
+  console.log(`Health check: http://localhost:${PORT}/api/health`);
 });

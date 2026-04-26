@@ -33,7 +33,7 @@ const LOCATION   = process.env.VERTEX_LOCATION   || 'us-central1';
  * - Chatbot -> gemini-2.0-flash-exp
  */
 const MODELS = {
-  PRO_3_1: 'gemini-3.1-pro-preview',
+  PRO_3_1: 'gemini-2.5-pro',       // Best available for deep analysis
   PRO_2_5: 'gemini-2.5-pro',
   FLASH:   'gemini-2.5-flash',
 };

@@ -9,6 +9,7 @@ import FairWatch from './pages/FairWatch';
 import Audit from './pages/Audit';
 import AuditChat from './pages/AuditChat';
 import DriftAnalysis from './pages/DriftAnalysis';
+import BigQuery from './pages/BigQuery';
 
 import { DomainProvider } from './context/DomainContext';
 
@@ -33,6 +34,7 @@ export default function App() {
 
               <Route path="/audit-chat" element={<AuditChat />} />
               <Route path="/drift" element={<DriftAnalysis />} />
+              <Route path="/bigquery" element={<BigQuery />} />
             </Routes>
           </main>
         </div>

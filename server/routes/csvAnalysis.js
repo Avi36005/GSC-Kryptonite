@@ -8,6 +8,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
 import { geminiPro } from '../services/geminiClient.js';
+import { firestoreService } from '../services/firestoreService.js';
 
 dotenv.config({ path: '../.env' });
 
@@ -261,6 +262,21 @@ Respond ONLY with valid JSON in this exact structure (no markdown, no extra text
     }, 30 * 60 * 1000);
 
     biasReport.cacheKey = cacheKey;
+
+    // Persist to Firestore for real data storage
+    firestoreService.saveAnalysisResult({
+      type: 'csv_analysis',
+      fileName: req.file.originalname,
+      domain: domainConfig.name,
+      overallBiasScore: biasReport.overallBiasScore,
+      legalRiskScore: biasReport.legalRiskScore,
+      ethicalRiskScore: biasReport.ethicalRiskScore,
+      totalRows: rows.length,
+      totalColumns: headers.length,
+      flaggedColumnsCount: biasReport.flaggedColumns?.length || 0,
+      complianceViolationsCount: biasReport.complianceViolations?.length || 0,
+      summary: biasReport.summary,
+    }).catch(err => console.error('Firestore save error:', err));
 
     res.json(biasReport);
   } catch (error) {

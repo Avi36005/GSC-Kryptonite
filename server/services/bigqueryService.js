@@ -1,119 +1,244 @@
+/**
+ * bigqueryService.js
+ * ─────────────────────────────────────────────────────────
+ * Real BigQuery integration for FairAI Guardian.
+ * Uses Application Default Credentials (ADC).
+ *
+ * Stores decision logs and provides drift analysis.
+ * Auto-creates the dataset and table on first use.
+ * ─────────────────────────────────────────────────────────
+ */
+
 import { BigQuery } from '@google-cloud/bigquery';
+
+const PROJECT_ID = process.env.BIGQUERY_PROJECT_ID || 'fairai-494213-f8';
+const DATASET_ID = 'fairai_guardian';
+const TABLE_ID = 'decision_logs';
 
 class BigQueryService {
   constructor() {
-    this.isSimulated = true; // For this demo, we simulate BigQuery
-    this.mockData = this.generateMockHistory();
-    this.rawLogs = []; // Stores real-time intercepted decisions for aggregation
-  }
+    this.projectId = PROJECT_ID;
+    this.datasetId = DATASET_ID;
+    this.tableId = TABLE_ID;
+    this.bigquery = null;
+    this.isReady = false;
+    this.rawLogs = []; // In-memory buffer for immediate access
 
-  generateMockHistory() {
-    const history = [];
-    const now = new Date();
-    for (let i = 40; i >= 0; i--) {
-      const date = new Date(now);
-      date.setDate(date.getDate() - i);
-      const dateStr = date.toISOString().split('T')[0];
-      
-      // Gradually increasing drift
-      const baseDrift = 2 + (40 - i) * 0.3; 
-      const total = 1000 + Math.floor(Math.random() * 200);
-      const biased = Math.floor(total * (baseDrift / 100));
-      
-      history.push({
-        date: dateStr,
-        totalDecisions: total,
-        biasedDecisions: biased,
-        avgConfidence: 0.95 - (baseDrift / 200),
-        driftScore: baseDrift / 100
-      });
-    }
-    return history;
+    this._initialize();
   }
 
   /**
-   * Logs an intercepted decision evaluation to "BigQuery"
+   * Initialize BigQuery client and ensure dataset/table exist.
+   */
+  async _initialize() {
+    try {
+      this.bigquery = new BigQuery({ projectId: this.projectId });
+
+      // Test connection by listing datasets
+      await this.bigquery.getDatasets({ maxResults: 1 });
+      console.log(`✅ BigQuery connected (project: ${this.projectId})`);
+
+      // Ensure dataset exists
+      await this._ensureDataset();
+
+      // Ensure table exists
+      await this._ensureTable();
+
+      this.isReady = true;
+      console.log(`✅ BigQuery ready: ${this.projectId}.${this.datasetId}.${this.tableId}`);
+    } catch (error) {
+      console.error('❌ BigQuery initialization failed:', error.message);
+      console.warn('⚠️  BigQuery will use in-memory fallback. Run: gcloud auth application-default login');
+      this.isReady = false;
+    }
+  }
+
+  async _ensureDataset() {
+    try {
+      const [datasets] = await this.bigquery.getDatasets();
+      const exists = datasets.some(ds => ds.id === this.datasetId);
+      if (!exists) {
+        await this.bigquery.createDataset(this.datasetId, {
+          location: 'US',
+        });
+        console.log(`✅ BigQuery dataset created: ${this.datasetId}`);
+      }
+    } catch (error) {
+      if (error.code !== 409) { // 409 = already exists
+        console.warn('BigQuery dataset check/create warning:', error.message);
+      }
+    }
+  }
+
+  async _ensureTable() {
+    const schema = [
+      { name: 'decisionId', type: 'STRING', mode: 'REQUIRED' },
+      { name: 'domain', type: 'STRING' },
+      { name: 'timestamp', type: 'TIMESTAMP' },
+      { name: 'originalPrediction', type: 'STRING' },
+      { name: 'mitigatedPrediction', type: 'STRING' },
+      { name: 'finalOutcome', type: 'STRING' },
+      { name: 'isBiased', type: 'BOOLEAN' },
+      { name: 'confidenceScore', type: 'FLOAT64' },
+      { name: 'flaggedFeatures', type: 'STRING' }, // JSON array as string
+      { name: 'biasReasoning', type: 'STRING' },
+      { name: 'isCompliant', type: 'BOOLEAN' },
+      { name: 'riskLevel', type: 'STRING' },
+      { name: 'explanation', type: 'STRING' },
+      { name: 'engine', type: 'STRING' },
+      { name: 'status', type: 'STRING' },
+    ];
+
+    try {
+      const dataset = this.bigquery.dataset(this.datasetId);
+      const [tables] = await dataset.getTables();
+      const exists = tables.some(t => t.id === this.tableId);
+
+      if (!exists) {
+        await dataset.createTable(this.tableId, { schema });
+        console.log(`✅ BigQuery table created: ${this.tableId}`);
+      }
+    } catch (error) {
+      if (error.code !== 409) {
+        console.warn('BigQuery table check/create warning:', error.message);
+      }
+    }
+  }
+
+  /**
+   * Logs an intercepted decision evaluation to BigQuery.
    */
   async logDecision(evaluation) {
-    if (this.isSimulated) {
-      // In simulation, we store the raw decision for aggregation in getDriftAnalysis
-      this.rawLogs.push({
-        date: new Date().toISOString().split('T')[0],
-        isBiased: evaluation.biasReport?.isBiased || false,
-        confidence: evaluation.biasReport?.confidenceScore || 0,
-        ...evaluation
-      });
-      return { success: true, simulated: true };
+    // Always store in-memory for immediate access
+    this.rawLogs.push({
+      date: new Date().toISOString().split('T')[0],
+      isBiased: evaluation.biasReport?.isBiased || false,
+      confidence: evaluation.biasReport?.confidenceScore || 0,
+      ...evaluation,
+    });
+
+    if (!this.isReady || !this.bigquery) {
+      console.log('[BigQuery Fallback] Decision logged in-memory:', evaluation.decisionId);
+      return { success: true, fallback: true };
     }
-    
-    // Real BigQuery implementation would go here
-    console.log("BigQuery Logging Enabled: (Not implemented in demo)");
-    return { success: true };
+
+    try {
+      const row = {
+        decisionId: evaluation.decisionId || `dec-${Date.now()}`,
+        domain: evaluation.domain || 'unknown',
+        timestamp: evaluation.timestamp || new Date().toISOString(),
+        originalPrediction: String(evaluation.originalPrediction || ''),
+        mitigatedPrediction: String(evaluation.mitigatedPrediction || ''),
+        finalOutcome: evaluation.finalOutcome || 'UNKNOWN',
+        isBiased: evaluation.biasReport?.isBiased || false,
+        confidenceScore: evaluation.biasReport?.confidenceScore || 0,
+        flaggedFeatures: JSON.stringify(evaluation.biasReport?.flaggedFeatures || []),
+        biasReasoning: String(evaluation.biasReport?.reasoning || ''),
+        isCompliant: evaluation.complianceReport?.isCompliant ?? true,
+        riskLevel: evaluation.riskReport?.riskLevel || 'UNKNOWN',
+        explanation: String(evaluation.explanation || '').substring(0, 5000),
+        engine: evaluation.engine || 'UNKNOWN',
+        status: evaluation.status || 'UNKNOWN',
+      };
+
+      await this.bigquery
+        .dataset(this.datasetId)
+        .table(this.tableId)
+        .insert([row]);
+
+      console.log(`[BigQuery] ✅ Decision logged: ${evaluation.decisionId}`);
+      return { success: true };
+    } catch (error) {
+      // Handle streaming insert errors (they have a specific format)
+      if (error.name === 'PartialFailureError') {
+        console.error('[BigQuery] Partial insert failure:', JSON.stringify(error.errors?.[0]?.errors));
+      } else {
+        console.error('[BigQuery] Error logging decision:', error.message);
+      }
+      return { success: false, error: error.message };
+    }
   }
 
   /**
-   * Fetches drift analysis over time
+   * Fetches drift analysis over time from BigQuery.
    */
   async getDriftAnalysis(domain = 'FINANCE') {
-    if (this.isSimulated) {
-      // Aggregate raw logs by date to merge with historical mock data
-      const aggregatedLogs = this.rawLogs.reduce((acc, log) => {
-        if (!acc[log.date]) {
-          acc[log.date] = { date: log.date, totalDecisions: 0, biasedDecisions: 0, sumConfidence: 0 };
-        }
-        acc[log.date].totalDecisions++;
-        if (log.isBiased) acc[log.date].biasedDecisions++;
-        acc[log.date].sumConfidence += log.confidence;
-        return acc;
-      }, {});
-
-      // Convert to array and calculate scores
-      const liveData = Object.values(aggregatedLogs).map(d => ({
-        ...d,
-        avgConfidence: d.sumConfidence / d.totalDecisions,
-        driftScore: d.biasedDecisions / d.totalDecisions
-      }));
-
-      // Merge mock data with live data (overwriting mock dates with real data if they overlap)
-      const dateMap = new Map();
-      this.mockData.forEach(d => dateMap.set(d.date, d));
-      liveData.forEach(d => {
-        const existing = dateMap.get(d.date) || { totalDecisions: 0, biasedDecisions: 0, sumConfidence: 0 };
-        const total = (existing.totalDecisions || 0) + d.totalDecisions;
-        const biased = (existing.biasedDecisions || 0) + d.biasedDecisions;
-        const avgConf = existing.avgConfidence ? (existing.avgConfidence + d.avgConfidence) / 2 : d.avgConfidence;
-        
-        dateMap.set(d.date, {
-          date: d.date,
-          totalDecisions: total,
-          biasedDecisions: biased,
-          avgConfidence: avgConf,
-          driftScore: biased / (total || 1)
-        });
-      });
-
-      return Array.from(dateMap.values()).sort((a, b) => a.date.localeCompare(b.date));
+    if (!this.isReady || !this.bigquery) {
+      // Fallback: aggregate in-memory raw logs
+      return this._getInMemoryDrift();
     }
 
-    const query = `
-      SELECT 
-        DATE(timestamp) as date,
-        COUNT(*) as totalDecisions,
-        SUM(CASE WHEN finalOutcome = 'INTERCEPTED' THEN 1 ELSE 0 END) as biasedDecisions,
-        AVG(biasReport.confidenceScore) as avgConfidence
-      FROM \`${this.datasetId}.${this.tableId}\`
-      WHERE domain = @domain
-      GROUP BY date
-      ORDER BY date ASC
-    `;
+    try {
+      const query = `
+        SELECT 
+          DATE(timestamp) as date,
+          COUNT(*) as totalDecisions,
+          COUNTIF(finalOutcome = 'INTERCEPTED') as biasedDecisions,
+          AVG(confidenceScore) as avgConfidence
+        FROM \`${this.projectId}.${this.datasetId}.${this.tableId}\`
+        ${domain !== 'ALL' ? 'WHERE domain = @domain' : ''}
+        GROUP BY date
+        ORDER BY date ASC
+        LIMIT 90
+      `;
 
-    const options = {
-      query: query,
-      params: { domain }
-    };
+      const options = {
+        query,
+        params: domain !== 'ALL' ? { domain } : {},
+      };
 
-    const [rows] = await this.bigquery.query(options);
-    return rows;
+      const [rows] = await this.bigquery.query(options);
+
+      // Calculate drift score for each row
+      const result = rows.map(row => ({
+        date: row.date?.value || row.date,
+        totalDecisions: row.totalDecisions,
+        biasedDecisions: row.biasedDecisions,
+        avgConfidence: row.avgConfidence || 0.85,
+        driftScore: row.biasedDecisions / (row.totalDecisions || 1),
+      }));
+
+      // If no historical data yet, merge with in-memory
+      if (result.length === 0) {
+        return this._getInMemoryDrift();
+      }
+
+      return result;
+    } catch (error) {
+      console.error('[BigQuery] Error fetching drift analysis:', error.message);
+      return this._getInMemoryDrift();
+    }
+  }
+
+  /**
+   * Fallback: aggregate in-memory raw logs by date.
+   */
+  _getInMemoryDrift() {
+    const aggregated = this.rawLogs.reduce((acc, log) => {
+      const date = log.date || new Date().toISOString().split('T')[0];
+      if (!acc[date]) {
+        acc[date] = { date, totalDecisions: 0, biasedDecisions: 0, sumConfidence: 0 };
+      }
+      acc[date].totalDecisions++;
+      if (log.isBiased) acc[date].biasedDecisions++;
+      acc[date].sumConfidence += (log.confidence || 0);
+      return acc;
+    }, {});
+
+    return Object.values(aggregated)
+      .map(d => ({
+        ...d,
+        avgConfidence: d.sumConfidence / (d.totalDecisions || 1),
+        driftScore: d.biasedDecisions / (d.totalDecisions || 1),
+      }))
+      .sort((a, b) => a.date.localeCompare(b.date));
+  }
+
+  /**
+   * Check if BigQuery is connected (for health checks).
+   */
+  isConnected() {
+    return this.isReady;
   }
 }
 

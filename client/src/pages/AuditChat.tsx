@@ -92,11 +92,14 @@ export default function AuditChat() {
                 </div>
               )}
               
-              <div className={`max-w-[75%] rounded-2xl p-4 ${msg.role === 'user' ? 'bg-white text-black rounded-tr-sm' : 'bg-neutral-800 text-neutral-200 rounded-tl-sm border border-neutral-700'}`}>
+              <div className={`max-w-[75%] rounded-2xl px-5 py-4 ${msg.role === 'user' ? 'bg-white text-black rounded-tr-sm' : 'bg-neutral-800 text-neutral-200 rounded-tl-sm border border-neutral-700'}`}>
                 {msg.role === 'user' ? (
-                  <p className="whitespace-pre-wrap leading-relaxed tracking-tight">{msg.content}</p>
+                  <p style={{ lineHeight: '1.75', letterSpacing: '0.01em', fontSize: '0.9375rem' }} className="whitespace-pre-wrap">{msg.content}</p>
                 ) : (
-                  <div className="prose prose-invert prose-base leading-relaxed tracking-tight max-w-none">
+                  <div
+                    style={{ lineHeight: '1.8', letterSpacing: '0.01em', fontSize: '0.9375rem', wordSpacing: '0.05em' }}
+                    className="prose prose-invert max-w-none"
+                  >
                     <ReactMarkdown>{msg.content}</ReactMarkdown>
                     
                     {msg.citations && msg.citations.length > 0 && (

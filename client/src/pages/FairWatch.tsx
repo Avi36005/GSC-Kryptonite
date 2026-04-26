@@ -2,7 +2,6 @@ import { TrendingUp, AlertTriangle, RefreshCw, Activity, ShieldCheck, Zap } from
 import { motion } from 'framer-motion';
 import { useEffect, useState, useMemo } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine, Area, AreaChart } from 'recharts';
-import { api } from '../services/api';
 import { useDomain } from '../context/DomainContext';
 
 const driftTimeline = [
@@ -35,25 +34,43 @@ export default function FairWatch() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    let cancelled = false;
+
     const fetchDrift = () => {
-      setIsLoading(true);
-      api.getDriftAnalysis(activeDomain).then((data) => {
-        setDriftData(data);
-        if (data?.historicalDrift?.length) {
-          setDriftScore(data.historicalDrift[data.historicalDrift.length - 1]?.score);
-        }
-        setError(null);
-      }).catch(err => {
-        console.error("Error fetching drift data:", err);
-        setError("Failed to load metrics. Monitoring heartbeat active.");
-      }).finally(() => {
-        setIsLoading(false);
-      });
+      // Only show full-page spinner on first load
+      if (!driftData) setIsLoading(true);
+
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000);
+
+      fetch(`http://localhost:5001/api/drift?domain=${encodeURIComponent(activeDomain)}`, { signal: controller.signal })
+        .then(r => r.json())
+        .then((data) => {
+          clearTimeout(timeoutId);
+          if (cancelled) return;
+          setDriftData(data);
+          if (data?.historicalDrift?.length) {
+            setDriftScore(data.historicalDrift[data.historicalDrift.length - 1]?.score);
+          }
+          setError(null);
+        })
+        .catch(err => {
+          clearTimeout(timeoutId);
+          if (cancelled) return;
+          if (err.name !== 'AbortError') console.error('FairWatch fetch error:', err);
+          setError('Backend unavailable — showing demo data. Start the server to see live metrics.');
+        })
+        .finally(() => {
+          if (!cancelled) setIsLoading(false);
+        });
     };
 
     fetchDrift();
-    const interval = setInterval(fetchDrift, 30000); // Refresh every 30 seconds
-    return () => clearInterval(interval);
+    const interval = setInterval(fetchDrift, 30000);
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
   }, [activeDomain]);
 
   // Transform historical drift for the chart if available
@@ -83,19 +100,23 @@ export default function FairWatch() {
   }, [driftData]);
 
   const syncMetrics = () => {
-    api.getDriftAnalysis(activeDomain).then((data) => {
-      setDriftData(data);
-      if (data?.driftScore != null) setDriftScore(data.driftScore);
-      else if (data?.historicalDrift?.length) setDriftScore(data.historicalDrift[data.historicalDrift.length - 1]?.score);
-      alert('Metrics synchronized successfully');
-    }).catch(() => alert('Failed to sync metrics'));
+    const controller = new AbortController();
+    setTimeout(() => controller.abort(), 5000);
+    fetch(`http://localhost:5001/api/drift?domain=${encodeURIComponent(activeDomain)}`, { signal: controller.signal })
+      .then(r => r.json())
+      .then((data) => {
+        setDriftData(data);
+        if (data?.driftScore != null) setDriftScore(data.driftScore);
+        else if (data?.historicalDrift?.length) setDriftScore(data.historicalDrift[data.historicalDrift.length - 1]?.score);
+        alert('Metrics synchronized successfully');
+      }).catch(() => alert('Failed to sync — backend may be offline.'));
   };
 
   const forceRetrain = () => {
     alert('Model retraining initiated. This process may take a while.');
   };
 
-  if (isLoading) {
+  if (isLoading && !driftData) {
     return (
       <div className="flex flex-col items-center justify-center h-full space-y-4">
         <div className="w-12 h-12 border-4 border-white/20 border-t-white rounded-full animate-spin"></div>

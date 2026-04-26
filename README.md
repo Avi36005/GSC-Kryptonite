@@ -364,11 +364,6 @@ firebase deploy --only hosting
 
 ---
 
-## 📸 Screenshots
-
-> Screenshots will be added after final deployment.
-
----
 
 ## 🎯 UN Sustainable Development Goals
 

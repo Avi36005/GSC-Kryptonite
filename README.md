@@ -20,14 +20,14 @@
 - [💡 Solution Overview](#-solution-overview)
 - [🔗 Links](#-links)
 - [🚀 Key Features](#-key-features)
+- [🎯 UN Sustainable Development Goals](#-un-sustainable-development-goals)
 - [🏗️ System Architecture](#️-system-architecture)
 - [⚙️ Data Processing Pipeline](#️-data-processing-pipeline)
 - [🤖 Multi-Agent System](#-multi-agent-system)
 - [☁️ Google Cloud Services Used](#️-google-cloud-services-used)
 - [🗂️ Project Structure](#️-project-structure)
 - [🖥️ Getting Started](#️-getting-started)
-- [🎯 UN Sustainable Development Goals](#-un-sustainable-development-goals)
-- [📜 License](#-license)
+- [📄 License](#-license)
 
 ---
 
@@ -96,6 +96,19 @@ FairAI Guardian provides an end-to-end, Google Cloud-native AI governance soluti
 | **📥 CSV Upload & Debias** | Upload → Analyze → Download corrected dataset, fully automated |
 | **🔌 Real-Time Updates** | Socket.IO for live bias alerts and system status broadcasting |
 | **🏷️ Explainability Engine** | Natural language explanations for every intercepted decision |
+
+---
+
+## 🎯 UN Sustainable Development Goals
+
+FairAI Guardian directly addresses the following UN SDGs:
+
+| SDG | How We Contribute |
+|---|---|
+| **SDG 10 — Reduced Inequalities** | Detects and eliminates algorithmic bias that disproportionately affects marginalized communities in hiring, lending, healthcare, and education |
+| **SDG 16 — Peace, Justice & Strong Institutions** | Ensures AI decision-making is transparent, accountable, and legally compliant with international frameworks |
+| **SDG 8 — Decent Work & Economic Growth** | Prevents discriminatory hiring practices by auditing recruitment AI systems in real-time |
+| **SDG 5 — Gender Equality** | Identifies and corrects gender-based bias in automated decision-making across all supported domains |
 
 ---
 
@@ -365,22 +378,9 @@ firebase deploy --only hosting
 ---
 
 
-## 🎯 UN Sustainable Development Goals
-
-FairAI Guardian directly addresses the following UN SDGs:
-
-| SDG | How We Contribute |
-|---|---|
-| **SDG 10 — Reduced Inequalities** | Detects and eliminates algorithmic bias that disproportionately affects marginalized communities in hiring, lending, healthcare, and education |
-| **SDG 16 — Peace, Justice & Strong Institutions** | Ensures AI decision-making is transparent, accountable, and legally compliant with international frameworks |
-| **SDG 8 — Decent Work & Economic Growth** | Prevents discriminatory hiring practices by auditing recruitment AI systems in real-time |
-| **SDG 5 — Gender Equality** | Identifies and corrects gender-based bias in automated decision-making across all supported domains |
-
----
-
 ## 📜 License
 
-This project is built for the **Google Solution Challenge 2026** and is open-source under the [MIT License](LICENSE).
+This project is built for the **Google Solution Challenge 2026** and is open-source under the [MIT License](https://opensource.org/licenses/MIT).
 
 ---
 

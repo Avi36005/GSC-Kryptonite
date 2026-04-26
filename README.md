@@ -26,7 +26,6 @@
 - [☁️ Google Cloud Services Used](#️-google-cloud-services-used)
 - [🗂️ Project Structure](#️-project-structure)
 - [🖥️ Getting Started](#️-getting-started)
-- [📸 Screenshots](#-screenshots)
 - [🎯 UN Sustainable Development Goals](#-un-sustainable-development-goals)
 - [📜 License](#-license)
 

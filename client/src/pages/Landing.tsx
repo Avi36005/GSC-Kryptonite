@@ -8,6 +8,7 @@ export default function Landing() {
   const pipelineSteps = [
     { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard, desc: 'Overview of all active AI models and domain compliance metrics' },
     { name: 'Analyzer', path: '/analyzer', icon: ActivitySquare, desc: 'Scan datasets for historical bias and compute fairness scores' },
+    { name: 'Interceptor', path: '/interceptor', icon: ShieldAlert, desc: 'Real-time monitoring and prevention of biased model outputs' },
     { name: 'Compliance Hub', path: '/compliance', icon: Scale, desc: 'Enforce domain-specific regulations and standards' },
     { name: 'AI Auditor', path: '/audit-chat', icon: Bot, desc: 'Interactive chat agent for generating deep compliance reports' },
   ];

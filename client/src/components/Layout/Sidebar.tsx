@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   LayoutDashboard,
   ShieldAlert,
@@ -10,7 +10,9 @@ import {
   Menu,
   X,
   Bot,
-  Binary
+  Binary,
+  Check,
+  ChevronDown
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useDomain } from '../../context/DomainContext';
@@ -19,12 +21,10 @@ import { api } from '../../services/api';
 
 const links = [
   { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
-  { name: 'Interceptor', path: '/interceptor', icon: ShieldAlert },
   { name: 'Analyzer', path: '/analyzer', icon: ActivitySquare },
+  { name: 'Interceptor', path: '/interceptor', icon: ShieldAlert },
   { name: 'Compliance', path: '/compliance', icon: Scale },
-  { name: 'FairWatch', path: '/fairwatch', icon: Eye },
   { name: 'Audit', path: '/audit', icon: FileCheck },
-  { name: 'Bias Drift', path: '/drift', icon: Binary },
   { name: 'AI Auditor', path: '/audit-chat', icon: Bot },
 ];
 
@@ -32,7 +32,16 @@ export default function Sidebar() {
   const location = useLocation();
   const [collapsed, setCollapsed] = useState(false);
   const [isHalted, setIsHalted] = useState(false);
+  const [dropdownOpen, setDropdownOpen] = useState(false);
   const { activeDomain, setActiveDomain } = useDomain();
+
+  const domains = [
+    { id: 'hiring', label: 'Hiring / Recruitment' },
+    { id: 'finance', label: 'Finance / Banking' },
+    { id: 'healthcare', label: 'Healthcare' },
+    { id: 'education', label: 'Education' },
+    { id: 'government', label: 'Government Services' },
+  ];
 
   useEffect(() => {
     // Initial fetch
@@ -78,19 +87,56 @@ export default function Sidebar() {
         </div>
 
         {!collapsed && (
-          <div className="flex flex-col gap-1">
-            <label className="text-[10px] uppercase text-neutral-500 font-semibold tracking-wider">Active Domain</label>
-            <select
-              value={activeDomain}
-              onChange={(e) => setActiveDomain(e.target.value)}
-              className="bg-neutral-800 border border-neutral-700 text-sm rounded-md py-1.5 px-2 text-white outline-none focus:border-blue-500 transition-colors w-full"
-            >
-              <option value="hiring">Hiring / Recruitment</option>
-              <option value="finance">Finance / Banking</option>
-              <option value="healthcare">Healthcare</option>
-              <option value="education">Education</option>
-              <option value="government">Government Services</option>
-            </select>
+          <div className="flex flex-col gap-1 relative">
+            <label className="text-[10px] uppercase text-neutral-500 font-semibold tracking-wider px-1">Active Domain</label>
+            <div className="relative">
+              <button
+                onClick={() => setDropdownOpen(!dropdownOpen)}
+                className="bg-neutral-800 border border-neutral-700 text-sm rounded-md py-1.5 px-3 text-white outline-none focus:border-blue-500 transition-all w-full flex items-center justify-between hover:bg-neutral-700/50"
+              >
+                <span className="truncate">
+                  {domains.find(d => d.id === activeDomain)?.label}
+                </span>
+                <ChevronDown size={14} className={`transition-transform duration-200 ${dropdownOpen ? 'rotate-180' : ''}`} />
+              </button>
+
+              <AnimatePresence>
+                {dropdownOpen && (
+                  <>
+                    <div 
+                      className="fixed inset-0 z-40" 
+                      onClick={() => setDropdownOpen(false)} 
+                    />
+                    <motion.div
+                      initial={{ opacity: 0, y: -10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -10 }}
+                      className="absolute top-full left-0 right-0 mt-1 bg-neutral-800 border border-neutral-700 rounded-lg shadow-xl overflow-hidden z-50 p-1"
+                    >
+                      {domains.map((domain) => (
+                        <button
+                          key={domain.id}
+                          onClick={() => {
+                            setActiveDomain(domain.id);
+                            setDropdownOpen(false);
+                          }}
+                          className={`w-full flex items-center gap-2 px-2 py-2 text-sm rounded-md transition-colors ${
+                            activeDomain === domain.id
+                              ? 'bg-blue-600/10 text-white'
+                              : 'text-neutral-400 hover:bg-neutral-700/50 hover:text-white'
+                          }`}
+                        >
+                          <div className="w-4 flex items-center justify-center">
+                            {activeDomain === domain.id && <Check size={14} className="text-white" />}
+                          </div>
+                          <span className="truncate">{domain.label}</span>
+                        </button>
+                      ))}
+                    </motion.div>
+                  </>
+                )}
+              </AnimatePresence>
+            </div>
           </div>
         )}
       </div>

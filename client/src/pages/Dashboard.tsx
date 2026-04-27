@@ -1,42 +1,38 @@
-import { Activity, ShieldCheck, AlertTriangle, Users, BrainCircuit, Zap, TrendingDown, LayoutDashboard, ShieldAlert, ActivitySquare } from 'lucide-react';
+import { 
+  Activity, ShieldCheck, AlertTriangle, Users, BrainCircuit, Zap, 
+  TrendingUp, LayoutDashboard, ShieldAlert, ActivitySquare, RefreshCw,
+  TrendingDown
+} from 'lucide-react';
 import { motion } from 'framer-motion';
 import KPI from '../components/Dashboard/KPI';
 import AIInsights from '../components/Dashboard/AIInsights';
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell } from 'recharts';
-import { useEffect, useState } from 'react';
+import { 
+  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, 
+  ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell, 
+  ReferenceLine 
+} from 'recharts';
+import { useEffect, useState, useMemo } from 'react';
 import { socket } from '../services/socket';
 import { api } from '../services/api';
 import { useDomain } from '../context/DomainContext';
 
-const biasPerHour = [
-  { name: '00:00', biasScore: 12, compliance: 98 },
-  { name: '02:00', biasScore: 8, compliance: 99 },
-  { name: '04:00', biasScore: 19, compliance: 96 },
-  { name: '06:00', biasScore: 11, compliance: 98 },
-  { name: '08:00', biasScore: 15, compliance: 97 },
-  { name: '10:00', biasScore: 42, compliance: 89 },
-  { name: '12:00', biasScore: 45, compliance: 88 },
-  { name: '14:00', biasScore: 32, compliance: 91 },
-  { name: '16:00', biasScore: 22, compliance: 95 },
-  { name: '18:00', biasScore: 18, compliance: 97 },
-  { name: '20:00', biasScore: 14, compliance: 98 },
-  { name: '22:00', biasScore: 10, compliance: 99 },
+const driftTimeline = [
+  { day: 'Day 1', accuracy: 94.2, fairness: 92, drift: 1 },
+  { day: 'Day 5', accuracy: 93.8, fairness: 91, drift: 2 },
+  { day: 'Day 10', accuracy: 93.1, fairness: 89, drift: 3 },
+  { day: 'Day 15', accuracy: 92.4, fairness: 88, drift: 4 },
+  { day: 'Day 20', accuracy: 91.0, fairness: 85, drift: 6 },
+  { day: 'Day 25', accuracy: 89.2, fairness: 82, drift: 9 },
+  { day: 'Day 30', accuracy: 87.5, fairness: 79, drift: 12 },
+  { day: 'Day 35', accuracy: 86.1, fairness: 76, drift: 15 },
+  { day: 'Day 40', accuracy: 88.3, fairness: 83, drift: 8 },
 ];
 
-const agentActivity = [
-  { name: 'BiasDetect', value: 342 },
-  { name: 'Compliance', value: 218 },
-  { name: 'Explanation', value: 189 },
-  { name: 'DecisionGuard', value: 415 },
-];
-
-const categoryBias = [
-  { category: 'Gender', score: 18 },
-  { category: 'Race', score: 31 },
-  { category: 'Age', score: 12 },
-  { category: 'Disability', score: 8 },
-  { category: 'Religion', score: 5 },
-  { category: 'Location', score: 24 },
+const featureShifts = [
+  { feature: 'Age Distribution', shift: '+14%', severity: 'Warning', detail: 'Mean shifted from 38.2 to 43.6' },
+  { feature: 'Income Bracket', shift: '+6%', severity: 'Normal', detail: 'Minor drift within tolerance' },
+  { feature: 'Geographic Region', shift: '+22%', severity: 'Critical', detail: 'New region codes not present in training data' },
+  { feature: 'Education Level', shift: '+3%', severity: 'Normal', detail: 'Stable distribution' },
 ];
 
 const PIE_COLORS = ['#6366f1', '#8b5cf6', '#06b6d4', '#10b981'];
@@ -58,9 +54,13 @@ export default function Dashboard() {
     { name: 'Rule-Based/Fallback', value: 15 }
   ]);
   const [stats, setStats] = useState({ compliance: 97.4, policies: 12, alerts: 3 });
-  const { domainConfig } = useDomain();
+  const [driftData, setDriftData] = useState<any>(null);
+  const [driftScore, setDriftScore] = useState<number | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const { domainConfig, activeDomain } = useDomain();
 
   useEffect(() => {
+    // WebSocket listeners
     socket.on('new_decision_intercepted', (data) => {
       setInterceptCount((prev) => prev + 1);
       setRecentEvents((prev) => [data, ...prev].slice(0, 5));
@@ -69,17 +69,17 @@ export default function Dashboard() {
         setEngineStats(prev => {
           const newStats = [...prev];
           const idx = data.engine === 'GEN_AI_PIPELINE' ? 0 : 1;
-          newStats[idx].value += 1;
+          newStats[idx] = { ...newStats[idx], value: Number(newStats[idx].value) + 1 };
           return newStats;
         });
       }
     });
 
+    // Fetch initial data
     api.getDecisions().then((data) => {
       if (Array.isArray(data)) {
         setRecentEvents(data.slice(-5).reverse());
         setInterceptCount(prev => Math.max(prev, data.length));
-        // Calculate engine distribution from history
         const aiCount = data.filter((d: any) => d.engine === 'GEN_AI_PIPELINE').length;
         const ruleCount = data.filter((d: any) => d.engine !== 'GEN_AI_PIPELINE').length;
         if (aiCount > 0 || ruleCount > 0) {
@@ -101,12 +101,81 @@ export default function Dashboard() {
       }
     }).catch(() => {});
 
-    return () => { socket.off('new_decision_intercepted'); };
-  }, []);
+    // Drift fetching logic
+    const fetchDrift = () => {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000);
+
+      fetch(`http://localhost:5001/api/drift?domain=${encodeURIComponent(activeDomain)}`, { signal: controller.signal })
+        .then(r => r.json())
+        .then((data) => {
+          clearTimeout(timeoutId);
+          setDriftData(data);
+          if (data?.historicalDrift?.length) {
+            setDriftScore(data.historicalDrift[data.historicalDrift.length - 1]?.score);
+          }
+          setError(null);
+        })
+        .catch(err => {
+          clearTimeout(timeoutId);
+          if (err.name !== 'AbortError') console.error('Drift fetch error:', err);
+          setError('Backend unavailable — showing demo data.');
+        });
+    };
+
+    fetchDrift();
+    const driftInterval = setInterval(fetchDrift, 30000);
+
+    return () => { 
+      socket.off('new_decision_intercepted'); 
+      clearInterval(driftInterval);
+    };
+  }, [activeDomain]);
+
+  const chartData = useMemo(() => {
+    const arr = driftData?.historicalDrift;
+    if (Array.isArray(arr) && arr.length > 0) {
+      return arr.map((d: any) => ({
+        day: d.date ?? 'N/A',
+        drift: d.score ?? 0,
+        accuracy: typeof d.accuracy === 'number' ? d.accuracy : 90,
+        fairness: typeof d.fairness === 'number' ? d.fairness * 100 : 85,
+      }));
+    }
+    return driftTimeline;
+  }, [driftData]);
+
+  const displayShifts = useMemo(() => {
+    if (driftData?.driftContributors?.length) {
+      return driftData.driftContributors.map((c: any) => {
+        const drift = typeof c.drift === 'number' ? c.drift : 0;
+        return {
+          feature: c.feature ?? 'Unknown',
+          shift: `+${drift.toFixed(1)}%`,
+          severity: drift > 15 ? 'Critical' : drift > 10 ? 'Warning' : 'Normal',
+          detail: `Feature importance shifted by ${drift.toFixed(1)}%`
+        };
+      });
+    }
+    return featureShifts;
+  }, [driftData]);
+
+  const lastDrift = useMemo(() => {
+    const arr = driftData?.historicalDrift;
+    if (Array.isArray(arr) && arr.length > 0) return arr[arr.length - 1];
+    return null;
+  }, [driftData]);
 
   return (
-    <motion.div className="space-y-8" variants={container} initial="hidden" animate="show">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-12">
+    <motion.div className="space-y-8 pb-10" variants={container} initial="hidden" animate="show">
+      {error && (
+        <div className="bg-amber-500/10 border border-amber-500/20 p-4 rounded-xl flex items-center gap-3 text-amber-400 text-sm mb-4">
+          <AlertTriangle size={18} />
+          {error}
+        </div>
+      )}
+
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
         <div className="flex items-center gap-4">
           <div className="w-14 h-14 bg-white text-black rounded-2xl flex items-center justify-center shadow-2xl shadow-white/10 border border-white/20">
             <LayoutDashboard size={28} strokeWidth={2.5} />
@@ -117,13 +186,21 @@ export default function Dashboard() {
               <span className="text-neutral-500 font-medium">/</span>
               <span className="text-neutral-300">{domainConfig?.name || 'Domain'}</span>
             </h1>
-            <p className="text-neutral-500 font-medium tracking-tight">System overview and compliance monitoring</p>
+            <p className="text-neutral-500 font-medium tracking-tight">Real-time surveillance & long-term drift monitoring</p>
           </div>
+        </div>
+        <div className="flex gap-3">
+           <button className="px-5 py-2.5 bg-neutral-800 hover:bg-neutral-700 text-white rounded-xl text-sm font-bold transition-all border border-neutral-700/50 flex items-center gap-2">
+             <RefreshCw size={16} /> Sync
+           </button>
+           <button className="px-5 py-2.5 bg-white hover:bg-neutral-200 text-black rounded-xl text-sm font-bold transition-all flex items-center gap-2">
+             <Zap size={16} /> Force Retrain
+           </button>
         </div>
       </div>
 
       {/* Summary Row */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-12">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
         <KPI 
           title="Security Compliance" 
           value={`${stats?.compliance || 0}%`} 
@@ -133,20 +210,20 @@ export default function Dashboard() {
           subtitle="All checks passed"
         />
         <KPI 
-          title="Active Policies" 
-          value={stats?.policies || 0} 
-          trend="+1" 
-          trendUp={true} 
+          title="Model Drift" 
+          value={driftScore != null ? `${driftScore.toFixed(1)}%` : '4.2%'} 
+          trend={driftScore != null && driftScore > 10 ? "+1.2%" : "-0.3%"} 
+          trendUp={driftScore != null && driftScore > 10} 
           icon={<Activity size={20} />} 
-          subtitle="Monitoring active"
+          subtitle={driftScore != null && driftScore > 15 ? "Action Required" : "Within safe limits"}
         />
         <KPI 
-          title="System Alerts" 
-          value={stats?.alerts || 0} 
-          trend="-12%" 
-          trendUp={false} 
-          icon={<AlertTriangle size={20} />} 
-          subtitle="Requires attention"
+          title="Fairness Index" 
+          value={lastDrift && typeof lastDrift.fairness === 'number' ? lastDrift.fairness.toFixed(2) : '0.83'} 
+          trend="+0.02" 
+          trendUp={true} 
+          icon={<TrendingUp size={20} />} 
+          subtitle="Target: > 0.80"
         />
         <KPI 
           title="AI Governance" 
@@ -160,201 +237,166 @@ export default function Dashboard() {
 
       <AIInsights />
 
-      {/* Charts Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {/* Compliance Trend */}
+      {/* Main Monitoring Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        {/* Trajectory Chart */}
         <motion.div 
-          className="bg-neutral-900/40 backdrop-blur-md border border-neutral-800/50 p-8 rounded-3xl shadow-2xl"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
+          className="lg:col-span-2 bg-neutral-900/40 backdrop-blur-md border border-neutral-800/50 p-8 rounded-3xl shadow-2xl relative overflow-hidden"
+          variants={item}
         >
-          <div className="flex items-center justify-between mb-8">
-            <h3 className="text-xl font-bold text-white tracking-tight">Compliance Trend</h3>
-            <div className="flex items-center gap-2">
-              <span className="w-3 h-3 rounded-full bg-indigo-500"></span>
-              <span className="text-xs text-neutral-400 font-bold uppercase tracking-widest">Compliance %</span>
+          <div className="absolute top-0 right-0 -mt-20 -mr-20 w-64 h-64 bg-indigo-600/5 blur-[100px] rounded-full"></div>
+          <div className="flex items-center justify-between mb-8 relative z-10">
+            <div>
+              <h3 className="text-xl font-bold text-white tracking-tight">Performance Trajectory</h3>
+              <p className="text-xs text-neutral-500 font-bold uppercase tracking-widest mt-1">Historical accuracy & drift</p>
+            </div>
+            <div className="flex gap-4">
+              <LegendItem color="bg-white" label="Accuracy" />
+              <LegendItem color="bg-emerald-500" label="Fairness" />
+              <LegendItem color="bg-amber-500" label="Drift" />
             </div>
           </div>
+          
           <div className="h-[350px] w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={biasPerHour}>
+              <AreaChart data={chartData}>
                 <defs>
-                  <linearGradient id="colorCompliance" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#6366f1" stopOpacity={0.4}/>
-                    <stop offset="95%" stopColor="#6366f1" stopOpacity={0}/>
+                  <linearGradient id="colorAcc" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#ffffff" stopOpacity={0.2} />
+                    <stop offset="95%" stopColor="#ffffff" stopOpacity={0} />
+                  </linearGradient>
+                  <linearGradient id="colorFair" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#10b981" stopOpacity={0.2} />
+                    <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
                   </linearGradient>
                 </defs>
-                <XAxis 
-                  dataKey="hour" 
-                  stroke="#404040" 
-                  fontSize={10} 
-                  fontWeight={700}
-                  tickLine={false} 
-                  axisLine={false}
-                  dy={10}
-                />
-                <YAxis 
-                  stroke="#404040" 
-                  fontSize={10} 
-                  fontWeight={700}
-                  tickLine={false} 
-                  axisLine={false}
-                  dx={-10}
-                />
+                <CartesianGrid strokeDasharray="3 3" stroke="#262626" vertical={false} />
+                <XAxis dataKey="day" stroke="#404040" fontSize={10} fontWeight={700} tickLine={false} axisLine={false} dy={10} />
+                <YAxis stroke="#404040" fontSize={10} fontWeight={700} tickLine={false} axisLine={false} dx={-10} />
                 <Tooltip 
-                  contentStyle={{ 
-                    backgroundColor: '#171717', 
-                    border: '1px solid #262626', 
-                    borderRadius: '16px',
-                    boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
-                    padding: '12px'
-                  }} 
+                  contentStyle={{ backgroundColor: '#171717', border: '1px solid #262626', borderRadius: '16px', padding: '12px' }} 
                   itemStyle={{ color: '#fff', fontSize: '12px', fontWeight: 'bold' }}
                 />
-                <Area 
-                  type="monotone" 
-                  dataKey="value" 
-                  stroke="#6366f1" 
-                  strokeWidth={3}
-                  fillOpacity={1} 
-                  fill="url(#colorCompliance)" 
-                />
+                <ReferenceLine y={90} stroke="#f59e0b" strokeDasharray="6 6" />
+                <Area type="monotone" dataKey="accuracy" stroke="#ffffff" strokeWidth={3} fillOpacity={1} fill="url(#colorAcc)" />
+                <Area type="monotone" dataKey="fairness" stroke="#10b981" strokeWidth={3} fillOpacity={1} fill="url(#colorFair)" />
+                <Area type="monotone" dataKey="drift" stroke="#f59e0b" strokeWidth={2} fill="transparent" />
               </AreaChart>
             </ResponsiveContainer>
           </div>
         </motion.div>
 
-        {/* Engine Distribution */}
+        {/* System Distribution (Pie) */}
         <motion.div 
           className="bg-neutral-900/40 backdrop-blur-md border border-neutral-800/50 p-8 rounded-3xl shadow-2xl"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
+          variants={item}
         >
-          <div className="flex items-center justify-between mb-8">
-            <h3 className="text-xl font-bold text-white tracking-tight">System Distribution</h3>
-            <div className="text-xs text-neutral-400 font-bold uppercase tracking-widest bg-neutral-800/50 px-3 py-1.5 rounded-lg border border-neutral-700/50">Live Stats</div>
+          <h3 className="text-xl font-bold text-white tracking-tight mb-8">System Distribution</h3>
+          <div className="h-[300px] w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={engineStats}
+                  cx="50%" cy="50%"
+                  innerRadius={60} outerRadius={100}
+                  paddingAngle={8} dataKey="value" stroke="none"
+                >
+                  {engineStats.map((_, index) => (
+                    <Cell key={`cell-${index}`} fill={PIE_COLORS[index % PIE_COLORS.length]} />
+                  ))}
+                </Pie>
+                <Tooltip contentStyle={{ backgroundColor: '#171717', border: '1px solid #262626', borderRadius: '16px' }} />
+              </PieChart>
+            </ResponsiveContainer>
           </div>
-          <div className="h-[350px] w-full flex flex-col md:flex-row items-center">
-            <div className="w-full md:w-1/2 h-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={engineStats}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={80}
-                    outerRadius={120}
-                    paddingAngle={8}
-                    dataKey="value"
-                    stroke="none"
-                  >
-                    {engineStats.map((_, index) => (
-                      <Cell key={`cell-${index}`} fill={PIE_COLORS[index % PIE_COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip 
-                    contentStyle={{ 
-                      backgroundColor: '#171717', 
-                      border: '1px solid #262626', 
-                      borderRadius: '16px',
-                      padding: '12px'
-                    }} 
-                  />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
-            <div className="w-full md:w-1/2 space-y-4 px-6">
-              {engineStats.map((entry, index) => (
-                <div key={entry.name} className="flex items-center justify-between group">
-                  <div className="flex items-center gap-3">
-                    <div className="w-3 h-3 rounded-full" style={{ backgroundColor: PIE_COLORS[index % PIE_COLORS.length] }}></div>
-                    <span className="text-sm font-bold text-neutral-300 group-hover:text-white transition-colors">{entry.name}</span>
-                  </div>
-                  <span className="text-sm font-black text-white">{entry.value}%</span>
+          <div className="space-y-3 mt-4">
+            {engineStats.map((entry, index) => (
+              <div key={entry.name} className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full" style={{ backgroundColor: PIE_COLORS[index % PIE_COLORS.length] }}></div>
+                  <span className="text-xs font-bold text-neutral-400">{entry.name}</span>
                 </div>
-              ))}
-            </div>
+                <span className="text-xs font-black text-white">{entry.value}%</span>
+              </div>
+            ))}
           </div>
         </motion.div>
       </div>
 
-      {/* Charts Row 2 */}
+      {/* Secondary Data Row */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        {/* Feature Shifts Table */}
         <motion.div 
-          className="lg:col-span-2 bg-neutral-900/40 backdrop-blur-md border border-neutral-800/50 p-8 rounded-3xl shadow-2xl"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3 }}
+          className="lg:col-span-2 bg-neutral-900/40 backdrop-blur-md border border-neutral-800/50 rounded-3xl overflow-hidden shadow-2xl"
+          variants={item}
         >
-          <div className="flex items-center justify-between mb-8">
-            <h3 className="text-xl font-bold text-white tracking-tight">Bias by Demographic Category</h3>
-            <div className="text-xs text-neutral-400 font-bold uppercase tracking-widest">Global metrics</div>
+          <div className="p-8 border-b border-neutral-800/50">
+            <h3 className="text-xl font-bold text-white tracking-tight">Feature Distribution Shifts</h3>
+            <p className="text-xs text-neutral-500 font-bold uppercase tracking-widest mt-1">Drift across input dimensions</p>
           </div>
-          <div className="h-72 w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={categoryBias} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
-                <XAxis 
-                  dataKey="category" 
-                  stroke="#404040" 
-                  fontSize={10} 
-                  fontWeight={700}
-                  tickLine={false} 
-                  axisLine={false} 
-                  dy={10}
-                />
-                <YAxis 
-                  stroke="#404040" 
-                  fontSize={10} 
-                  fontWeight={700}
-                  tickLine={false} 
-                  axisLine={false} 
-                />
-                <Tooltip 
-                  contentStyle={{ backgroundColor: '#171717', border: '1px solid #262626', borderRadius: '16px', padding: '12px' }} 
-                  cursor={{fill: '#ffffff', opacity: 0.05}} 
-                />
-                <Bar dataKey="score" name="Bias Score" radius={[4, 4, 0, 0]}>
-                  {categoryBias.map((entry, index) => (
-                    <Cell key={index} fill={entry.score > 25 ? '#ef4444' : entry.score > 15 ? '#f59e0b' : '#10b981'} />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left">
+              <thead>
+                <tr className="bg-neutral-950/30 text-[10px] uppercase tracking-widest text-neutral-500 border-b border-neutral-800/50">
+                  <th className="px-8 py-4 font-black">Feature</th>
+                  <th className="px-8 py-4 font-black text-center">Shift</th>
+                  <th className="px-8 py-4 font-black">Severity</th>
+                  <th className="px-8 py-4 font-black">Analysis</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-neutral-800/30">
+                {displayShifts.map((f: any) => (
+                  <tr key={f.feature} className="hover:bg-white/5 transition-colors">
+                    <td className="px-8 py-5 text-sm font-bold text-white">{f.feature}</td>
+                    <td className="px-8 py-5 text-center">
+                      <span className="font-mono text-xs font-bold text-indigo-400 bg-indigo-500/10 px-2 py-1 rounded-lg border border-indigo-500/20">
+                        {f.shift}
+                      </span>
+                    </td>
+                    <td className="px-8 py-5">
+                      <span className={`px-2 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest border ${
+                        f.severity === 'Critical' ? 'bg-rose-500/20 text-rose-400 border-rose-500/30' :
+                        f.severity === 'Warning' ? 'bg-amber-500/20 text-amber-400 border-amber-500/30' :
+                        'bg-emerald-500/20 text-emerald-400 border-emerald-500/30'
+                      }`}>{f.severity}</span>
+                    </td>
+                    <td className="px-8 py-5 text-xs text-neutral-500">{f.detail}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </motion.div>
 
+        {/* Recent Events / Alerts Feed */}
         <motion.div 
           className="bg-neutral-900/40 backdrop-blur-md border border-neutral-800/50 p-8 rounded-3xl shadow-2xl flex flex-col"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.4 }}
+          variants={item}
         >
           <div className="flex items-center gap-3 mb-8">
-            <div className="w-10 h-10 bg-white/5 rounded-xl flex items-center justify-center border border-white/10">
-              <Zap className="text-white" size={20} />
-            </div>
-            <div>
-              <h3 className="text-xl font-bold text-white tracking-tight">Recent Events</h3>
-              <p className="text-xs text-neutral-500 font-bold uppercase tracking-widest">Live Feed</p>
-            </div>
+             <div className="w-10 h-10 bg-white/5 rounded-xl flex items-center justify-center border border-white/10">
+               <Zap className="text-white" size={20} />
+             </div>
+             <div>
+               <h3 className="text-xl font-bold text-white tracking-tight">Live Interceptions</h3>
+               <p className="text-xs text-neutral-500 font-bold uppercase tracking-widest">Real-time Safety Feed</p>
+             </div>
           </div>
-          <div className="flex-1 space-y-4 overflow-y-auto max-h-[300px] pr-2 custom-scrollbar">
+          <div className="flex-1 space-y-4 overflow-y-auto max-h-[400px] pr-2 custom-scrollbar">
             {recentEvents.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-full text-center p-8 bg-black/20 rounded-2xl border border-neutral-800/50 border-dashed">
                 <p className="text-neutral-500 font-medium text-sm">No recent signals detected.</p>
               </div>
             ) : (
               recentEvents.map((ev, i) => (
-                <div key={i} className={`p-4 rounded-2xl border transition-all duration-300 hover:bg-white/5 ${ev.finalOutcome === 'INTERCEPTED' ? 'border-white/20 bg-white/5' : 'border-neutral-800/50 bg-black/20'}`}>
+                <div key={i} className={`p-4 rounded-2xl border transition-all duration-300 hover:bg-white/5 ${ev.finalOutcome === 'INTERCEPTED' ? 'border-rose-500/20 bg-rose-500/5' : 'border-neutral-800/50 bg-black/20'}`}>
                   <div className="flex justify-between items-start mb-2">
-                    <span className="font-mono text-white/40 text-[10px] tracking-tighter">{ev.decisionId}</span>
-                    <span className={`px-2 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-widest border ${ev.finalOutcome === 'INTERCEPTED' ? 'bg-white text-black border-white' : 'bg-neutral-800 text-neutral-400 border-neutral-700'}`}>{ev.finalOutcome}</span>
+                    <span className="font-mono text-neutral-500 text-[10px] tracking-tighter">{ev.decisionId || 'EVT-001'}</span>
+                    <span className={`px-2 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-widest border ${ev.finalOutcome === 'INTERCEPTED' ? 'bg-rose-500 text-white border-rose-500' : 'bg-neutral-800 text-neutral-400 border-neutral-700'}`}>{ev.finalOutcome}</span>
                   </div>
+                  <p className="text-[10px] text-neutral-400 leading-tight">Decision blocked due to fairness policy violation.</p>
                   <div className="flex items-center justify-between mt-3">
-                    <span className="text-neutral-500 text-[10px] font-bold uppercase tracking-widest">{new Date(ev.timestamp).toLocaleTimeString()}</span>
-                    <div className="w-1.5 h-1.5 rounded-full bg-white/20"></div>
+                    <span className="text-neutral-600 text-[10px] font-bold uppercase tracking-widest">{new Date(ev.timestamp).toLocaleTimeString()}</span>
                   </div>
                 </div>
               ))
@@ -363,5 +405,14 @@ export default function Dashboard() {
         </motion.div>
       </div>
     </motion.div>
+  );
+}
+
+function LegendItem({ color, label }: any) {
+  return (
+    <div className="flex items-center gap-2">
+      <div className={`w-2 h-2 rounded-full ${color}`}></div>
+      <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest">{label}</span>
+    </div>
   );
 }

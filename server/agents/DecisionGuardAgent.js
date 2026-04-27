@@ -122,6 +122,9 @@ export class DecisionGuardAgent {
 
     // Still log it
     firestoreService.saveAuditLog(fallback).catch(console.error);
+    pubsubService.publishDecisionEvent(fallback).catch(console.error);
+    bigqueryService.logDecision(fallback).catch(console.error);
+
     return fallback;
   }
 }

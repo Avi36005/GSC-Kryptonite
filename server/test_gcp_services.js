@@ -1,6 +1,6 @@
-import { bigqueryService } from './server/services/bigqueryService.js';
-import { pubsubService } from './server/services/pubsubService.js';
-import { geminiClient } from './server/services/geminiClient.js';
+import { bigqueryService } from './services/bigqueryService.js';
+import { pubsubService } from './services/pubsubService.js';
+import { geminiFlash } from './services/geminiClient.js';
 import * as dotenv from 'dotenv';
 dotenv.config();
 
@@ -37,7 +37,7 @@ async function testServices() {
 
   console.log('Testing Gemini...');
   try {
-    const res = await geminiClient.generateContent('gemini-2.5-flash', 'Hello, this is a test. Please reply with "Test successful".');
+    const res = await geminiFlash('Hello, this is a test. Please reply with "Test successful".');
     console.log('Gemini test passed. Reply:', res);
   } catch (err) {
     console.error('Gemini test failed:', err);

@@ -5,11 +5,8 @@ import Dashboard from './pages/Dashboard';
 import Interceptor from './pages/Interceptor';
 import Analyzer from './pages/Analyzer';
 import Compliance from './pages/Compliance';
-import FairWatch from './pages/FairWatch';
 import Audit from './pages/Audit';
 import AuditChat from './pages/AuditChat';
-import DriftAnalysis from './pages/DriftAnalysis';
-import BigQuery from './pages/BigQuery';
 
 import { DomainProvider } from './context/DomainContext';
 
@@ -29,12 +26,8 @@ export default function App() {
               <Route path="/interceptor" element={<Interceptor />} />
               <Route path="/analyzer" element={<Analyzer />} />
               <Route path="/compliance" element={<Compliance />} />
-              <Route path="/fairwatch" element={<FairWatch />} />
               <Route path="/audit" element={<Audit />} />
-
               <Route path="/audit-chat" element={<AuditChat />} />
-              <Route path="/drift" element={<DriftAnalysis />} />
-              <Route path="/bigquery" element={<BigQuery />} />
             </Routes>
           </main>
         </div>

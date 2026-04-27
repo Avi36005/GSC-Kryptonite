@@ -24,7 +24,7 @@ Draft a concise, professional 2-sentence summary explaining exactly why this alg
 If the bias or compliance analysis is flagged as "unavailable" or "bypassed", mention that "System safety limits triggered a precautionary suspension for manual review."
 If the analysis came from a rule-based engine, mention that "Automated policy triggers" identified the risk.`;
 
-      const text = await geminiPro(prompt);
+      const text = await geminiFlash(prompt);
       return text.trim() || 'Explanation could not be generated. Decision suspended for manual auditing.';
     } catch (error) {
       console.error('ExplanationAgent Error:', error);

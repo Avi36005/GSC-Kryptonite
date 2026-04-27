@@ -53,8 +53,12 @@ async function buildLiveSystemContext(app) {
   try {
     const auditLogs = await firestoreService.getRecentAuditLogs(5);
     context.recentAuditLogs = auditLogs;
+    
+    const recentAnalyses = await firestoreService.getRecentAnalyses(5);
+    context.recentAnalyses = recentAnalyses;
   } catch (_) {
     context.recentAuditLogs = [];
+    context.recentAnalyses = [];
   }
 
   return context;

@@ -25,9 +25,7 @@ const links = [
   { name: 'Analyzer', path: '/analyzer', icon: ActivitySquare },
   { name: 'Interceptor', path: '/interceptor', icon: ShieldAlert },
   { name: 'Compliance', path: '/compliance', icon: Scale },
-  { name: 'Audit', path: '/audit', icon: FileCheck },
-  { name: 'Drift Analysis', path: '/drift', icon: ActivitySquare },
-  { name: 'BigQuery', path: '/bigquery', icon: Database },
+  { name: 'Governance', path: '/audit', icon: History },
   { name: 'AI Auditor', path: '/audit-chat', icon: Bot },
 ];
 

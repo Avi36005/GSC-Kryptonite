@@ -147,6 +147,11 @@ export const api = {
     return res.json();
   },
 
+  async getGovernanceEvents() {
+    const res = await fetch(`${API_BASE}/governance-events`);
+    return res.json();
+  },
+
   async getSystemStatus() {
     const res = await fetch(`${API_BASE}/system/status`);
     return res.json();

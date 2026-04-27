@@ -3,6 +3,7 @@ import { DecisionGuardAgent } from '../agents/DecisionGuardAgent.js';
 import { getDomainConfig } from '../domains/index.js';
 
 import { bigqueryService } from '../services/bigqueryService.js';
+import { firestoreService } from '../services/firestoreService.js';
 
 const router = express.Router();
 const guardAgent = new DecisionGuardAgent();
@@ -198,6 +199,31 @@ router.get('/drift', async (req, res) => {
   } catch (err) {
     console.error("Drift API Error:", err);
     res.status(500).json({ error: "Failed to fetch drift analysis" });
+  }
+});
+
+/**
+ * GET /api/governance-events
+ * Returns a unified stream of decisions and dataset analysis results for the Audit page.
+ */
+router.get('/governance-events', async (req, res) => {
+  try {
+    const logs = [...decisionLogs];
+    const analyses = await firestoreService.getRecentAnalyses(10);
+    
+    const events = [
+      ...logs.map(d => ({ ...d, type: 'decision' })),
+      ...analyses.map(a => ({ ...a, type: 'dataset_analysis', id: a.id }))
+    ].sort((a, b) => {
+      const dateA = new Date(a.timestamp || a.createdAt?.toDate?.() || a.createdAt || 0);
+      const dateB = new Date(b.timestamp || b.createdAt?.toDate?.() || b.createdAt || 0);
+      return dateB.getTime() - dateA.getTime();
+    });
+
+    res.json(events);
+  } catch (err) {
+    console.error("Governance Events API Error:", err);
+    res.status(500).json({ error: "Failed to fetch governance history" });
   }
 });
 

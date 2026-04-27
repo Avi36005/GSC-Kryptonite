@@ -22,7 +22,7 @@ export class DecisionGuardAgent {
     console.log(`[DecisionGuard] Intercepting Decision ${decisionId} under domain: ${domainContext}...`);
 
     const domainConfig = getDomainConfig(domainContext);
-    const SLA_TIMEOUT = 2000; // 2 seconds SLA
+    const SLA_TIMEOUT = 8000; // 8 seconds SLA
 
     try {
       // 1. Run Bias and Risk Assessment in parallel (independent)

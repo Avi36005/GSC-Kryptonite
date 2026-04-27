@@ -279,6 +279,17 @@ Respond ONLY with valid JSON in this exact structure (no markdown, no extra text
     }).catch(err => console.error('Firestore save error:', err));
 
     res.json(biasReport);
+
+    // Emit live event for Dashboard/Audit
+    const io = req.app.get('io');
+    if (io) {
+      io.emit('new_governance_event', {
+        type: 'dataset_analysis',
+        fileName: req.file.originalname,
+        domain: domainConfig.name,
+        timestamp: new Date().toISOString()
+      });
+    }
   } catch (error) {
     console.error('CSV Analysis Error:', error);
     // Clean up file on error

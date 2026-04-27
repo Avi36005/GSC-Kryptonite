@@ -125,6 +125,16 @@ export class AuditChatAgent {
           ? `Current Drift Score: ${(currentDriftScore * 100).toFixed(1)}%`
           : 'Drift Score: Not available';
 
+        // Format recent dataset audits
+        const recentAnalysesSummary = (systemContext.recentAnalyses || []).length > 0
+          ? JSON.stringify(systemContext.recentAnalyses.slice(0, 3).map(a => ({
+              fileName: a.fileName || a.metadata?.fileName || 'Unknown',
+              biasScore: `${a.overallBiasScore}%`,
+              legalRisk: `${a.legalRiskScore}%`,
+              analyzedAt: new Date(a.createdAt?.toDate?.() || a.createdAt).toLocaleString()
+            })), null, 2)
+          : 'No recent dataset audits.';
+
         // Format recent intercepted decisions
         const recentInterceptedSummary = (recentDecisions || [])
           .filter(d => d.finalOutcome === 'INTERCEPTED')
@@ -146,6 +156,9 @@ ${driftLevel}
 
 Recent Intercepted Decisions:
 ${recentInterceptedSummary}
+
+Recent Dataset Audits:
+${recentAnalysesSummary}
 
 ${lastDecisionDetail}
 
@@ -176,14 +189,16 @@ STRICT RULES:
 5. Cite specific regulations (e.g., "GDPR Article 22", "EU AI Act Article 14") when relevant.
 6. Use bullet points for lists.
 7. Always suggest actionable next steps.
-${liveSystemBlock}
 
 RETRIEVED REGULATORY CONTEXT:
 ${ragContext}
-${decisionCtx}
 
 CONVERSATION HISTORY:
 ${historyText}
+
+${liveSystemBlock}
+${decisionCtx}
+
 Human: ${userMessage}
 Assistant:`;
 

@@ -27,7 +27,7 @@ Respond strictly in JSON format:
   "reasoning": string
 }`;
 
-      const responseText = await geminiPro(prompt);
+      const responseText = await geminiFlash(prompt);
 
       const jsonMatch = responseText.match(/\{[\s\S]*\}/);
       if (jsonMatch) {

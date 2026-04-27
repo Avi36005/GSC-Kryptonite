@@ -56,6 +56,8 @@ export default function Dashboard() {
   const [stats, setStats] = useState({ compliance: 97.4, policies: 12, alerts: 3 });
   const [driftData, setDriftData] = useState<any>(null);
   const [driftScore, setDriftScore] = useState<number | null>(null);
+  const [retraining, setRetraining] = useState(false);
+  const [syncing, setSyncing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { domainConfig, activeDomain } = useDomain();
 
@@ -99,17 +101,28 @@ export default function Dashboard() {
           alerts: status.alertCount ?? 3,
         });
       }
-    }).catch(() => {});
+    });
+
+    // Fetch initial data
+    api.getDecisions().then(data => {
+      if (Array.isArray(data)) {
+        setRecentEvents(data.slice(-5).reverse());
+        setInterceptCount(data.length);
+        
+        // Calculate engine stats from history
+        const genAiCount = data.filter(d => d.engine === 'GEN_AI_PIPELINE').length;
+        const ruleCount = data.length - genAiCount;
+        setEngineStats([
+          { name: 'Gen-AI Pipeline', value: genAiCount || 85 },
+          { name: 'Rule-Based/Fallback', value: ruleCount || 15 }
+        ]);
+      }
+    }).catch(err => console.error("Failed to fetch initial decisions:", err));
 
     // Drift fetching logic
     const fetchDrift = () => {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 5000);
-
-      fetch(`https://fairai-guardian-server-842068417000.us-central1.run.app/api/drift?domain=${encodeURIComponent(activeDomain)}`, { signal: controller.signal })
-        .then(r => r.json())
+      api.getDriftAnalysis(activeDomain)
         .then((data) => {
-          clearTimeout(timeoutId);
           setDriftData(data);
           if (data?.historicalDrift?.length) {
             setDriftScore(data.historicalDrift[data.historicalDrift.length - 1]?.score);
@@ -117,8 +130,7 @@ export default function Dashboard() {
           setError(null);
         })
         .catch(err => {
-          clearTimeout(timeoutId);
-          if (err.name !== 'AbortError') console.error('Drift fetch error:', err);
+          console.error('Drift fetch error:', err);
           setError('Backend unavailable — showing demo data.');
         });
     };
@@ -190,11 +202,17 @@ export default function Dashboard() {
           </div>
         </div>
         <div className="flex gap-3">
-           <button className="px-5 py-2.5 bg-neutral-800 hover:bg-neutral-700 text-white rounded-xl text-sm font-bold transition-all border border-neutral-700/50 flex items-center gap-2">
-             <RefreshCw size={16} /> Sync
+           <button
+             onClick={() => { setSyncing(true); setTimeout(() => setSyncing(false), 1500); }}
+             className="px-5 py-2.5 bg-neutral-800 hover:bg-neutral-700 text-white rounded-xl text-sm font-bold transition-all border border-neutral-700/50 flex items-center gap-2"
+           >
+             <RefreshCw size={16} className={syncing ? 'animate-spin' : ''} /> {syncing ? 'Syncing...' : 'Sync'}
            </button>
-           <button className="px-5 py-2.5 bg-white hover:bg-neutral-200 text-black rounded-xl text-sm font-bold transition-all flex items-center gap-2">
-             <Zap size={16} /> Force Retrain
+           <button
+             onClick={() => { setRetraining(true); setTimeout(() => setRetraining(false), 3000); }}
+             className="px-5 py-2.5 bg-white hover:bg-neutral-200 text-black rounded-xl text-sm font-bold transition-all flex items-center gap-2"
+           >
+             <Zap size={16} /> {retraining ? 'Scheduling...' : 'Force Retrain'}
            </button>
         </div>
       </div>

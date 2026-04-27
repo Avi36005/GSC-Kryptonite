@@ -257,16 +257,23 @@ export default function Dashboard() {
 
       {/* Main Monitoring Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Trajectory Chart */}
+        {/* Trajectory Chart — Live BigQuery Feed */}
         <motion.div 
           className="lg:col-span-2 bg-neutral-900/40 backdrop-blur-md border border-neutral-800/50 p-8 rounded-3xl shadow-2xl relative overflow-hidden"
           variants={item}
         >
+          <div className="absolute top-0 right-0 p-6 z-20">
+            <div className="flex items-center gap-2 px-3 py-1 bg-emerald-500/10 border border-emerald-500/20 rounded-full">
+              <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
+              <span className="text-[10px] font-black text-emerald-500 uppercase tracking-widest">Live BQ Feed</span>
+            </div>
+          </div>
+
           <div className="absolute top-0 right-0 -mt-20 -mr-20 w-64 h-64 bg-indigo-600/5 blur-[100px] rounded-full"></div>
           <div className="flex items-center justify-between mb-8 relative z-10">
             <div>
               <h3 className="text-xl font-bold text-white tracking-tight">Performance Trajectory</h3>
-              <p className="text-xs text-neutral-500 font-bold uppercase tracking-widest mt-1">Historical accuracy & drift</p>
+              <p className="text-xs text-neutral-500 font-bold uppercase tracking-widest mt-1">Historical Accuracy, Fairness & Drift</p>
             </div>
             <div className="flex gap-4">
               <LegendItem color="bg-white" label="Accuracy" />
@@ -277,7 +284,7 @@ export default function Dashboard() {
           
           <div className="h-[350px] w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={chartData}>
+              <AreaChart data={chartData.length > 0 ? chartData : driftTimeline}>
                 <defs>
                   <linearGradient id="colorAcc" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor="#ffffff" stopOpacity={0.2} />

@@ -1,32 +1,56 @@
 export const API_BASE = import.meta.env.VITE_API_URL ? `${import.meta.env.VITE_API_URL}/api` : 'https://fairai-guardian-server-842068417000.us-central1.run.app/api';
 
+const TIMEOUT = 120000; // 120 seconds default for heavy AI analysis
+
+async function fetchWithTimeout(resource: string, options: any = {}) {
+  const { timeout = TIMEOUT } = options;
+  const controller = new AbortController();
+  const id = setTimeout(() => controller.abort(), timeout);
+  
+  try {
+    const response = await fetchWithTimeout(resource, {
+      ...options,
+      signal: controller.signal
+    });
+    clearTimeout(id);
+    return response;
+  } catch (error: any) {
+    clearTimeout(id);
+    if (error.name === 'AbortError') {
+      throw new Error('Request timed out. The AI is processing a large volume of data, please try again.');
+    }
+    throw error;
+  }
+}
+
 export const api = {
   async analyzeDecision(id: string, features: Record<string, unknown>, prediction: string, domain: string) {
-    const res = await fetch(`${API_BASE}/decisions/intercept`, {
+    const res = await fetchWithTimeout(`${API_BASE}/decisions/intercept`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ id, features, prediction, domain }),
+      timeout: 10000 // Tight 10s timeout for real-time interception
     });
     return res.json();
   },
 
   async getDecisions() {
-    const res = await fetch(`${API_BASE}/decisions`);
+    const res = await fetchWithTimeout(`${API_BASE}/decisions`);
     return res.json();
   },
 
   async getComplianceStatus(domain: string) {
-    const res = await fetch(`${API_BASE}/compliance-status?domain=${encodeURIComponent(domain)}`);
+    const res = await fetchWithTimeout(`${API_BASE}/compliance-status?domain=${encodeURIComponent(domain)}`);
     return res.json();
   },
 
   async getDriftAnalysis(domain: string) {
-    const res = await fetch(`${API_BASE}/drift?domain=${encodeURIComponent(domain)}`);
+    const res = await fetchWithTimeout(`${API_BASE}/drift?domain=${encodeURIComponent(domain)}`);
     return res.json();
   },
 
   async analyzeDataset(dataset: unknown[]) {
-    const res = await fetch(`${API_BASE}/analyze`, {
+    const res = await fetchWithTimeout(`${API_BASE}/analyze`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ dataset }),
@@ -35,7 +59,7 @@ export const api = {
   },
 
   async getDomainConfig(domain: string) {
-    const res = await fetch(`${API_BASE}/domain-config?domain=${encodeURIComponent(domain)}`);
+    const res = await fetchWithTimeout(`${API_BASE}/domain-config?domain=${encodeURIComponent(domain)}`);
     return res.json();
   },
 
@@ -46,7 +70,7 @@ export const api = {
     formData.append('csvFile', file);
     formData.append('domain', domain);
 
-    const res = await fetch(`${API_BASE}/analyze-csv`, {
+    const res = await fetchWithTimeout(`${API_BASE}/analyze-csv`, {
       method: 'POST',
       body: formData,
     });
@@ -60,7 +84,7 @@ export const api = {
   },
 
   async generateUnbiasedCSV(cacheKey: string) {
-    const res = await fetch(`${API_BASE}/generate-unbiased-csv`, {
+    const res = await fetchWithTimeout(`${API_BASE}/generate-unbiased-csv`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ cacheKey }),
@@ -78,7 +102,7 @@ export const api = {
    * Analyze raw data (e.g. from BigQuery) without file upload
    */
   async analyzeData(headers: string[], rows: Record<string, string>[], domain: string, sourceName: string) {
-    const res = await fetch(`${API_BASE}/analyze-data`, {
+    const res = await fetchWithTimeout(`${API_BASE}/analyze-data`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ headers, rows, domain, sourceName }),
@@ -95,7 +119,7 @@ export const api = {
   /* ── BigQuery ── */
 
   async bigqueryTestConnection(projectId: string) {
-    const res = await fetch(`${API_BASE}/bigquery/test-connection`, {
+    const res = await fetchWithTimeout(`${API_BASE}/bigquery/test-connection`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ projectId }),
@@ -110,7 +134,7 @@ export const api = {
   },
 
   async bigqueryListTables(projectId: string, datasetId: string) {
-    const res = await fetch(`${API_BASE}/bigquery/list-tables`, {
+    const res = await fetchWithTimeout(`${API_BASE}/bigquery/list-tables`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ projectId, datasetId }),
@@ -125,7 +149,7 @@ export const api = {
   },
 
   async bigqueryFetchTable(projectId: string, datasetId: string, tableId: string, maxRows = 10000) {
-    const res = await fetch(`${API_BASE}/bigquery/fetch-table`, {
+    const res = await fetchWithTimeout(`${API_BASE}/bigquery/fetch-table`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ projectId, datasetId, tableId, maxRows }),
@@ -140,7 +164,7 @@ export const api = {
   },
 
   async getDashboardInsights() {
-    const res = await fetch(`${API_BASE}/dashboard-insights`);
+    const res = await fetchWithTimeout(`${API_BASE}/dashboard-insights`);
     if (!res.ok) {
       throw new Error(`Failed to fetch dashboard insights: ${res.status}`);
     }
@@ -148,17 +172,17 @@ export const api = {
   },
 
   async getGovernanceEvents() {
-    const res = await fetch(`${API_BASE}/governance-events`);
+    const res = await fetchWithTimeout(`${API_BASE}/governance-events`);
     return res.json();
   },
 
   async getSystemStatus() {
-    const res = await fetch(`${API_BASE}/system/status`);
+    const res = await fetchWithTimeout(`${API_BASE}/system/status`);
     return res.json();
   },
 
   async toggleHalt(halt: boolean) {
-    const res = await fetch(`${API_BASE}/system/halt`, {
+    const res = await fetchWithTimeout(`${API_BASE}/system/halt`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ halt }),
@@ -168,7 +192,7 @@ export const api = {
 
   /* ── Voice ── */
   async voiceTTS(text: string) {
-    const res = await fetch(`${API_BASE}/voice/tts`, {
+    const res = await fetchWithTimeout(`${API_BASE}/voice/tts`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ text }),
@@ -177,7 +201,7 @@ export const api = {
   },
 
   async voiceSTT(audioBase64: string) {
-    const res = await fetch(`${API_BASE}/voice/stt`, {
+    const res = await fetchWithTimeout(`${API_BASE}/voice/stt`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ audio: audioBase64 }),

@@ -1,6 +1,6 @@
 import { io } from 'socket.io-client';
 
-const SOCKET_URL = 'http://localhost:5001';
+const SOCKET_URL = import.meta.env.VITE_API_URL || 'https://fairai-guardian-server-842068417000.us-central1.run.app';
 
 export const socket = io(SOCKET_URL, {
   autoConnect: true,

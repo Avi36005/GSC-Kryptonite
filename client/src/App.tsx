@@ -7,8 +7,13 @@ import Analyzer from './pages/Analyzer';
 import Compliance from './pages/Compliance';
 import Audit from './pages/Audit';
 import AuditChat from './pages/AuditChat';
+import DriftAnalysis from './pages/DriftAnalysis';
+import BigQueryExplorer from './pages/BigQueryExplorer';
+
+
 
 import { DomainProvider } from './context/DomainContext';
+import { ReportProvider } from './context/ReportContext';
 
 export default function App() {
   const location = useLocation();
@@ -16,8 +21,9 @@ export default function App() {
 
   return (
     <DomainProvider>
-      <div className={`min-h-screen flex ${isLanding ? 'bg-black text-white' : 'bg-neutral-950 text-neutral-50'}`}>
-        {!isLanding && <Sidebar />}
+      <ReportProvider>
+        <div className={`min-h-screen flex ${isLanding ? 'bg-black text-white' : 'bg-neutral-950 text-neutral-50'}`}>
+          {!isLanding && <Sidebar />}
         <div className="flex-1 flex flex-col h-screen">
           <main className={`flex-1 overflow-y-auto w-full ${!isLanding ? 'p-8' : ''}`}>
             <Routes>
@@ -28,10 +34,13 @@ export default function App() {
               <Route path="/compliance" element={<Compliance />} />
               <Route path="/audit" element={<Audit />} />
               <Route path="/audit-chat" element={<AuditChat />} />
+              <Route path="/drift" element={<DriftAnalysis />} />
+              <Route path="/bigquery" element={<BigQueryExplorer />} />
             </Routes>
           </main>
         </div>
-      </div>
+        </div>
+      </ReportProvider>
     </DomainProvider>
   );
 }

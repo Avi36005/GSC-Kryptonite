@@ -1,4 +1,4 @@
-export const API_BASE = 'http://localhost:5001/api';
+export const API_BASE = import.meta.env.VITE_API_URL ? `${import.meta.env.VITE_API_URL}/api` : 'https://fairai-guardian-server-842068417000.us-central1.run.app/api';
 
 export const api = {
   async analyzeDecision(id: string, features: Record<string, unknown>, prediction: string, domain: string) {
@@ -157,6 +157,25 @@ export const api = {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ halt }),
+    });
+    return res.json();
+  },
+
+  /* ── Voice ── */
+  async voiceTTS(text: string) {
+    const res = await fetch(`${API_BASE}/voice/tts`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text }),
+    });
+    return res.json();
+  },
+
+  async voiceSTT(audioBase64: string) {
+    const res = await fetch(`${API_BASE}/voice/stt`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ audio: audioBase64 }),
     });
     return res.json();
   },

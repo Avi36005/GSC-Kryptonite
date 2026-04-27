@@ -39,6 +39,7 @@ import chatRoutes from './routes/chat.js';
 import autofixRoutes from './routes/autofix.js';
 import insightsRoutes from './routes/insights.js';
 import bigqueryRoutes from './routes/bigquery.js';
+import voiceRoutes from './routes/voice.js';
 
 app.use('/api', apiRoutes);
 app.use('/api', csvRoutes);
@@ -46,6 +47,7 @@ app.use('/api', chatRoutes);
 app.use('/api', autofixRoutes);
 app.use('/api', insightsRoutes);
 app.use('/api', bigqueryRoutes);
+app.use('/api', voiceRoutes);
 
 // Socket.io Connection Logic
 io.on('connection', (socket) => {

@@ -32,11 +32,25 @@ class BigQueryService {
    */
   async _initialize() {
     try {
-      this.bigquery = new BigQuery({ projectId: this.projectId });
+      const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
+      const privateKey = process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n');
+
+      if (clientEmail && privateKey && clientEmail !== 'your_service_account_email') {
+        this.bigquery = new BigQuery({
+          projectId: this.projectId,
+          credentials: {
+            client_email: clientEmail,
+            private_key: privateKey,
+          },
+        });
+        console.log(`✅ BigQuery connected with Service Account (project: ${this.projectId})`);
+      } else {
+        this.bigquery = new BigQuery({ projectId: this.projectId });
+        console.log(`✅ BigQuery connected with ADC (project: ${this.projectId})`);
+      }
 
       // Test connection by listing datasets
       await this.bigquery.getDatasets({ maxResults: 1 });
-      console.log(`✅ BigQuery connected (project: ${this.projectId})`);
 
       // Ensure dataset exists
       await this._ensureDataset();
@@ -48,7 +62,7 @@ class BigQueryService {
       console.log(`✅ BigQuery ready: ${this.projectId}.${this.datasetId}.${this.tableId}`);
     } catch (error) {
       console.error('❌ BigQuery initialization failed:', error.message);
-      console.warn('⚠️  BigQuery will use in-memory fallback. Run: gcloud auth application-default login');
+      console.warn('⚠️  BigQuery will use in-memory fallback. Run: gcloud auth application-default login or provide credentials in .env');
       this.isReady = false;
     }
   }

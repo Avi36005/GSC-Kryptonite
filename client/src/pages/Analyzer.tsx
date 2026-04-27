@@ -5,9 +5,11 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useState, useRef, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
+
 import { api } from '../services/api';
 import { useDomain } from '../context/DomainContext';
+import { useReport } from '../context/ReportContext';
 
 /* ────────── Types ────────── */
 interface FlaggedColumn {
@@ -177,8 +179,11 @@ const pipelineStages = [
 /* ────────── Main Component ────────── */
 export default function Analyzer() {
   const { activeDomain, domainConfig } = useDomain();
+  const { setLatestReport } = useReport();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
+  const location = useLocation();
+
 
   // State
   const [file, setFile] = useState<File | null>(null);
@@ -191,6 +196,14 @@ export default function Analyzer() {
   const [error, setError] = useState<string | null>(null);
   const [expandedColumns, setExpandedColumns] = useState<Set<string>>(new Set());
   const [dragOver, setDragOver] = useState(false);
+
+  // Load report from navigation state (e.g. from BigQuery Explorer)
+  useState(() => {
+    if (location.state?.report) {
+      setBiasReport(location.state.report);
+    }
+  });
+
 
   /* ── File handling ── */
   const handleFile = useCallback(async (f: File) => {
@@ -248,6 +261,7 @@ export default function Analyzer() {
       clearInterval(stageInterval);
       setCurrentStage(pipelineStages.length - 1);
       setBiasReport(report);
+      setLatestReport(report);
     } catch (err: unknown) {
       clearInterval(stageInterval);
       setError(err instanceof Error ? err.message : 'Analysis failed. Please try again.');

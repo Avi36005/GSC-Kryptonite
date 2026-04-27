@@ -24,16 +24,31 @@ class PubSubService {
 
   async _initialize() {
     try {
-      this.pubsub = new PubSub({ projectId: PROJECT_ID });
+      const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
+      const privateKey = process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n');
+
+      if (clientEmail && privateKey && clientEmail !== 'your_service_account_email') {
+        this.pubsub = new PubSub({
+          projectId: PROJECT_ID,
+          credentials: {
+            client_email: clientEmail,
+            private_key: privateKey,
+          },
+        });
+        console.log(`✅ Pub/Sub connected with Service Account (project: ${PROJECT_ID})`);
+      } else {
+        this.pubsub = new PubSub({ projectId: PROJECT_ID });
+        console.log(`✅ Pub/Sub connected with ADC (project: ${PROJECT_ID})`);
+      }
 
       // Ensure topic exists
       await this._ensureTopic();
 
       this.isReady = true;
-      console.log(`✅ Pub/Sub connected (project: ${PROJECT_ID}, topic: ${this.topicName})`);
+      console.log(`✅ Pub/Sub ready: ${PROJECT_ID}.${this.topicName}`);
     } catch (error) {
       console.error('❌ Pub/Sub initialization failed:', error.message);
-      console.warn('⚠️  Pub/Sub will use console-log fallback. Run: gcloud auth application-default login');
+      console.warn('⚠️  Pub/Sub will use console-log fallback. Run: gcloud auth application-default login or provide credentials in .env');
       this.isReady = false;
     }
   }

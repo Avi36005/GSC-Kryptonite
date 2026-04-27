@@ -20,18 +20,33 @@ let db = null;
 export const initFirebase = () => {
   try {
     if (!admin.apps.length) {
-      admin.initializeApp({
-        credential: admin.credential.applicationDefault(),
-        projectId: PROJECT_ID,
-      });
-      console.log(`✅ Firebase Admin initialized (project: ${PROJECT_ID})`);
+      const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
+      const privateKey = process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n');
+
+      if (clientEmail && privateKey && clientEmail !== 'your_service_account_email') {
+        admin.initializeApp({
+          credential: admin.credential.cert({
+            projectId: PROJECT_ID,
+            clientEmail: clientEmail,
+            privateKey: privateKey,
+          }),
+          projectId: PROJECT_ID,
+        });
+        console.log(`✅ Firebase Admin initialized with Service Account (project: ${PROJECT_ID})`);
+      } else {
+        admin.initializeApp({
+          credential: admin.credential.applicationDefault(),
+          projectId: PROJECT_ID,
+        });
+        console.log(`✅ Firebase Admin initialized with ADC (project: ${PROJECT_ID})`);
+      }
     }
     db = admin.firestore();
     db.settings({ ignoreUndefinedProperties: true });
     console.log('✅ Firestore connected successfully');
   } catch (error) {
     console.error('❌ Failed to initialize Firebase Admin:', error.message);
-    console.warn('⚠️  Firestore will operate in fallback mode. Run: gcloud auth application-default login');
+    console.warn('⚠️  Firestore will operate in fallback mode. Run: gcloud auth application-default login or provide service account credentials in .env');
     db = null;
   }
 };

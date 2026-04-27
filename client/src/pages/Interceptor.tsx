@@ -4,6 +4,7 @@ import { useEffect, useState, useRef } from 'react';
 import { socket } from '../services/socket';
 import { api, API_BASE } from '../services/api';
 import { useDomain } from '../context/DomainContext';
+import { useReport } from '../context/ReportContext';
 
 interface DecisionEvent {
   decisionId: string;
@@ -42,6 +43,7 @@ export default function Interceptor() {
   const [isHalted, setIsHalted] = useState(false);
   const feedRef = useRef<HTMLDivElement>(null);
   const { activeDomain, domainConfig } = useDomain();
+  const { latestReport } = useReport();
   
   const activeScenarios = domainConfig?.scenarios || [];
 
@@ -142,6 +144,39 @@ export default function Interceptor() {
           </button>
         </div>
       </header>
+
+      {/* Linked Analyzer Report Banner */}
+      {latestReport && (
+        <motion.div 
+          initial={{ opacity: 0, x: -20 }} 
+          animate={{ opacity: 1, x: 0 }}
+          className="bg-blue-500/10 border border-blue-500/20 rounded-2xl p-4 flex items-center justify-between"
+        >
+          <div className="flex items-center gap-4">
+            <div className="p-2 bg-blue-500/20 rounded-lg">
+              <ActivitySquare className="text-blue-400" size={24} />
+            </div>
+            <div>
+              <h3 className="text-white font-bold text-sm">Active Bias Policy: {latestReport.metadata.fileName}</h3>
+              <p className="text-neutral-400 text-xs">
+                Interceptor is now enforcing guards based on {latestReport.flaggedColumns.length} flagged proxy variables.
+              </p>
+            </div>
+          </div>
+          <div className="flex gap-2">
+            {latestReport.flaggedColumns.slice(0, 3).map(col => (
+              <span key={col.column} className="text-[10px] bg-neutral-900 text-blue-400 px-2 py-1 rounded border border-blue-500/30 font-mono">
+                {col.column}
+              </span>
+            ))}
+            {latestReport.flaggedColumns.length > 3 && (
+              <span className="text-[10px] bg-neutral-900 text-neutral-500 px-2 py-1 rounded border border-white/5">
+                +{latestReport.flaggedColumns.length - 3} more
+              </span>
+            )}
+          </div>
+        </motion.div>
+      )}
 
       {/* Scenario Buttons */}
       <div className="glass rounded-2xl p-6 border border-white/5 relative overflow-hidden">

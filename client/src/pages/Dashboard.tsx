@@ -106,7 +106,7 @@ export default function Dashboard() {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 5000);
 
-      fetch(`http://localhost:5001/api/drift?domain=${encodeURIComponent(activeDomain)}`, { signal: controller.signal })
+      fetch(`https://fairai-guardian-server-842068417000.us-central1.run.app/api/drift?domain=${encodeURIComponent(activeDomain)}`, { signal: controller.signal })
         .then(r => r.json())
         .then((data) => {
           clearTimeout(timeoutId);

@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Send, Bot, User, BookOpen, AlertCircle, FileText } from 'lucide-react';
+import { Send, Bot, User, BookOpen, AlertCircle, FileText, Mic, MicOff, Volume2, VolumeX } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import { api, API_BASE } from '../services/api';
 
@@ -22,7 +22,12 @@ export default function AuditChat() {
   ]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isListening, setIsListening] = useState(false);
+  const [isSpeaking, setIsSpeaking] = useState(false);
+  const [muteVoice, setMuteVoice] = useState(false);
+  const isProcessingRef = useRef(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const recognitionRef = useRef<any>(null);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -32,10 +37,77 @@ export default function AuditChat() {
     scrollToBottom();
   }, [messages]);
 
-  const handleSend = async () => {
-    if (!input.trim() || isLoading) return;
+  // Initialize Speech Recognition
+  useEffect(() => {
+    if (typeof window !== 'undefined' && (window as any).webkitSpeechRecognition) {
+      const SpeechRecognition = (window as any).webkitSpeechRecognition;
+      recognitionRef.current = new SpeechRecognition();
+      recognitionRef.current.continuous = false;
+      recognitionRef.current.interimResults = false;
+      recognitionRef.current.lang = 'en-US';
 
-    const userMessage = input.trim();
+      recognitionRef.current.onresult = (event: any) => {
+        if (isProcessingRef.current) return;
+        const transcript = event.results[0][0].transcript;
+        setInput(transcript);
+        setIsListening(false);
+        // Automatically send if it's a confident transcript
+        handleSend(transcript);
+      };
+
+      recognitionRef.current.onerror = (event: any) => {
+        console.error('Speech recognition error:', event.error);
+        setIsListening(false);
+      };
+
+      recognitionRef.current.onend = () => {
+        setIsListening(false);
+      };
+    }
+  }, []);
+
+  const speak = async (text: string) => {
+    if (muteVoice) return;
+
+    try {
+      // 1. Try Backend Neural Voice First (Highest Quality)
+      const data = await api.voiceTTS(text);
+      if (data?.audio) {
+        const audio = new Audio(`data:audio/mp3;base64,${data.audio}`);
+        audio.onplay = () => setIsSpeaking(true);
+        audio.onended = () => setIsSpeaking(false);
+        audio.play();
+        return;
+      }
+    } catch (err) {
+      console.warn('Backend TTS failed, using browser fallback:', err);
+    }
+    
+    // 2. Browser Fallback
+    if (!('speechSynthesis' in window)) return;
+    window.speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.rate = 1.05;
+    utterance.pitch = 1;
+    utterance.volume = 1;
+    
+    // Find a premium voice if possible
+    const voices = window.speechSynthesis.getVoices();
+    const premiumVoice = voices.find(v => v.name.includes('Google') || v.name.includes('Premium'));
+    if (premiumVoice) utterance.voice = premiumVoice;
+
+    utterance.onstart = () => setIsSpeaking(true);
+    utterance.onend = () => setIsSpeaking(false);
+    
+    window.speechSynthesis.speak(utterance);
+  };
+
+  const handleSend = async (overrideInput?: string) => {
+    const textToSend = overrideInput || input;
+    if (!textToSend.trim() || isLoading || isProcessingRef.current) return;
+
+    isProcessingRef.current = true;
+    const userMessage = textToSend.trim();
     setInput('');
     setMessages(prev => [...prev, { role: 'user', content: userMessage }]);
     setIsLoading(true);
@@ -59,6 +131,9 @@ export default function AuditChat() {
         content: data.content,
         citations: data.citations
       }]);
+
+      // Trigger Voice Response
+      speak(data.content.replace(/[*#]/g, ''));
     } catch (error) {
       console.error('Chat Error:', error);
       setMessages(prev => [...prev, { 
@@ -67,6 +142,16 @@ export default function AuditChat() {
       }]);
     } finally {
       setIsLoading(false);
+      isProcessingRef.current = false;
+    }
+  };
+
+  const toggleListening = () => {
+    if (isListening) {
+      recognitionRef.current?.stop();
+    } else {
+      setIsListening(true);
+      recognitionRef.current?.start();
     }
   };
 
@@ -75,8 +160,26 @@ export default function AuditChat() {
       <motion.header variants={item}>
         <h1 className="text-3xl font-bold tracking-tight text-white flex items-center gap-3">
           <Bot className="text-white" size={32} /> AI Auditor
+          {isSpeaking && (
+            <motion.div 
+              animate={{ scale: [1, 1.2, 1] }} 
+              transition={{ repeat: Infinity, duration: 1 }}
+              className="w-2 h-2 rounded-full bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.5)]"
+            />
+          )}
         </h1>
-        <p className="text-neutral-400 mt-2 tracking-tight leading-relaxed">RAG-powered conversational assistant for compliance and bias explanation.</p>
+        <div className="flex justify-between items-center mt-2">
+          <p className="text-neutral-400 tracking-tight leading-relaxed">RAG-powered conversational assistant for compliance and bias explanation.</p>
+          <button 
+            onClick={() => {
+              setMuteVoice(!muteVoice);
+              if (!muteVoice) window.speechSynthesis.cancel();
+            }}
+            className="p-2 text-neutral-500 hover:text-white transition-colors"
+          >
+            {muteVoice ? <VolumeX size={18} /> : <Volume2 size={18} />}
+          </button>
+        </div>
       </motion.header>
 
       <motion.div className="flex-1 bg-neutral-900 border border-neutral-800 rounded-xl overflow-hidden flex flex-col" variants={item}>
@@ -155,13 +258,21 @@ export default function AuditChat() {
               placeholder="Ask about regulations, bias in hiring, disparate impact..."
               className="flex-1 bg-transparent border-none text-neutral-200 focus:outline-none py-2"
             />
-            <button
-              onClick={handleSend}
-              disabled={!input.trim() || isLoading}
-              className="p-2 rounded-lg bg-white text-black hover:bg-neutral-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            >
-              <Send size={18} />
-            </button>
+            <div className="flex items-center gap-1">
+              <button
+                onClick={toggleListening}
+                className={`p-2 rounded-lg transition-all ${isListening ? 'bg-rose-500 text-white animate-pulse' : 'text-neutral-400 hover:text-white hover:bg-white/5'}`}
+              >
+                {isListening ? <MicOff size={18} /> : <Mic size={18} />}
+              </button>
+              <button
+                onClick={() => handleSend()}
+                disabled={!input.trim() || isLoading}
+                className="p-2 rounded-lg bg-white text-black hover:bg-neutral-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                <Send size={18} />
+              </button>
+            </div>
           </div>
           <div className="mt-2 text-center flex items-center justify-center gap-1 text-[11px] text-neutral-500">
             <AlertCircle size={12} /> AI Auditor uses Gemini 2.5 and RAG. Always verify legal claims.

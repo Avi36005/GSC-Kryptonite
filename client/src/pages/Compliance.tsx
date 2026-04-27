@@ -5,6 +5,7 @@ import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import { api } from '../services/api';
 import { useDomain } from '../context/DomainContext';
+import { useReport } from '../context/ReportContext';
 
 const frameworkScores = [
   { name: 'Data Privacy & Localization', score: 89, color: 'blue' },
@@ -21,6 +22,7 @@ export default function Compliance() {
   const [apiScores, setApiScores] = useState<{ name: string; score: number }[]>([]);
   const [regulations, setRegulations] = useState<any[]>([]);
   const { activeDomain, domainConfig } = useDomain();
+  const { latestReport } = useReport();
 
   useEffect(() => {
     api.getComplianceStatus(activeDomain).then((data) => {
@@ -69,13 +71,45 @@ export default function Compliance() {
         </button>
       </motion.header>
 
-      {/* API scores display */}
-      {apiScores.length > 0 && (
+      {/* Live API Scores display */}
+      {(apiScores.length > 0 || latestReport) && (
         <motion.div className="bg-neutral-900 border border-neutral-800 rounded-xl p-4 flex flex-wrap items-center gap-6" variants={item}>
           <span className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">Live API Scores:</span>
+          {latestReport && (
+            <>
+              <span className="text-sm text-white"><span className="text-neutral-400">Bias Score:</span> <span className="font-bold">{latestReport.overallBiasScore}%</span></span>
+              <span className="text-sm text-white"><span className="text-neutral-400">Legal Risk:</span> <span className="font-bold">{latestReport.legalRiskScore}%</span></span>
+              <span className="text-sm text-white"><span className="text-neutral-400">Ethical Risk:</span> <span className="font-bold">{latestReport.ethicalRiskScore}%</span></span>
+            </>
+          )}
           {apiScores.map((s) => (
             <span key={s.name} className="text-sm text-white"><span className="text-neutral-400">{s.name}:</span> <span className="font-bold">{s.score}%</span></span>
           ))}
+        </motion.div>
+      )}
+
+      {/* Dataset Specific Violations */}
+      {latestReport && latestReport.complianceViolations.length > 0 && (
+        <motion.div className="bg-rose-500/5 border border-rose-500/20 rounded-xl p-5" variants={item}>
+          <h3 className="text-rose-400 font-bold flex items-center gap-2 mb-4">
+            <AlertCircle size={18} /> Detected Dataset Violations ({latestReport.metadata.fileName})
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {latestReport.complianceViolations.map((v, i) => (
+              <div key={i} className="bg-neutral-900/50 border border-rose-500/10 p-3 rounded-lg">
+                <div className="flex justify-between items-center mb-1">
+                  <span className="text-rose-400 font-semibold text-sm">{v.framework}</span>
+                  <span className="text-[10px] bg-rose-500 text-white px-1.5 py-0.5 rounded font-bold uppercase">{v.severity}</span>
+                </div>
+                <p className="text-neutral-400 text-xs">{v.violation}</p>
+                <div className="mt-2 flex flex-wrap gap-1">
+                  {v.affectedColumns.map((col) => (
+                    <span key={col} className="text-[10px] bg-neutral-800 text-neutral-500 px-1.5 py-0.5 rounded font-mono">{col}</span>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
         </motion.div>
       )}
 

@@ -12,7 +12,8 @@ import {
   Bot,
   Binary,
   Check,
-  ChevronDown
+  ChevronDown,
+  Database
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useDomain } from '../../context/DomainContext';
@@ -25,6 +26,8 @@ const links = [
   { name: 'Interceptor', path: '/interceptor', icon: ShieldAlert },
   { name: 'Compliance', path: '/compliance', icon: Scale },
   { name: 'Audit', path: '/audit', icon: FileCheck },
+  { name: 'Drift Analysis', path: '/drift', icon: ActivitySquare },
+  { name: 'BigQuery', path: '/bigquery', icon: Database },
   { name: 'AI Auditor', path: '/audit-chat', icon: Bot },
 ];
 

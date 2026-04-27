@@ -8,7 +8,7 @@ async function fetchWithTimeout(resource: string, options: any = {}) {
   const id = setTimeout(() => controller.abort(), timeout);
   
   try {
-    const response = await fetchWithTimeout(resource, {
+    const response = await fetch(resource, {
       ...options,
       signal: controller.signal
     });

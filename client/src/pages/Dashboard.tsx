@@ -1,7 +1,7 @@
 import { 
   Activity, ShieldCheck, AlertTriangle, Users, BrainCircuit, Zap, 
   TrendingUp, LayoutDashboard, ShieldAlert, ActivitySquare, RefreshCw,
-  TrendingDown
+  TrendingDown, Bot
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import KPI from '../components/Dashboard/KPI';
@@ -386,39 +386,59 @@ export default function Dashboard() {
           </div>
         </motion.div>
 
-        {/* Recent Events / Alerts Feed */}
+        {/* Active Risk Hotspots Feed */}
         <motion.div 
           className="bg-neutral-900/40 backdrop-blur-md border border-neutral-800/50 p-8 rounded-3xl shadow-2xl flex flex-col"
           variants={item}
         >
           <div className="flex items-center gap-3 mb-8">
-             <div className="w-10 h-10 bg-white/5 rounded-xl flex items-center justify-center border border-white/10">
-               <Zap className="text-white" size={20} />
+             <div className="w-10 h-10 bg-rose-500/10 rounded-xl flex items-center justify-center border border-rose-500/20">
+               <ShieldAlert className="text-rose-500" size={20} />
              </div>
              <div>
-               <h3 className="text-xl font-bold text-white tracking-tight">Live Interceptions</h3>
-               <p className="text-xs text-neutral-500 font-bold uppercase tracking-widest">Real-time Safety Feed</p>
+               <h3 className="text-xl font-bold text-white tracking-tight">Active Risk Hotspots</h3>
+               <p className="text-xs text-neutral-500 font-bold uppercase tracking-widest">Priority Bias Vectors</p>
              </div>
           </div>
-          <div className="flex-1 space-y-4 overflow-y-auto max-h-[400px] pr-2 custom-scrollbar">
-            {recentEvents.length === 0 ? (
-              <div className="flex flex-col items-center justify-center h-full text-center p-8 bg-black/20 rounded-2xl border border-neutral-800/50 border-dashed">
-                <p className="text-neutral-500 font-medium text-sm">No recent signals detected.</p>
-              </div>
-            ) : (
-              recentEvents.map((ev, i) => (
-                <div key={i} className={`p-4 rounded-2xl border transition-all duration-300 hover:bg-white/5 ${ev.finalOutcome === 'INTERCEPTED' ? 'border-rose-500/20 bg-rose-500/5' : 'border-neutral-800/50 bg-black/20'}`}>
-                  <div className="flex justify-between items-start mb-2">
-                    <span className="font-mono text-neutral-500 text-[10px] tracking-tighter">{ev.decisionId || 'EVT-001'}</span>
-                    <span className={`px-2 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-widest border ${ev.finalOutcome === 'INTERCEPTED' ? 'bg-rose-500 text-white border-rose-500' : 'bg-neutral-800 text-neutral-400 border-neutral-700'}`}>{ev.finalOutcome}</span>
-                  </div>
-                  <p className="text-[10px] text-neutral-400 leading-tight">Decision blocked due to fairness policy violation.</p>
-                  <div className="flex items-center justify-between mt-3">
-                    <span className="text-neutral-600 text-[10px] font-bold uppercase tracking-widest">{new Date(ev.timestamp).toLocaleTimeString()}</span>
-                  </div>
+          <div className="flex-1 space-y-6">
+            {[
+              { name: 'Age Proxies', risk: 'Critical', score: 88, color: 'bg-rose-500' },
+              { name: 'Geographical Bias', risk: 'Warning', score: 64, color: 'bg-amber-500' },
+              { name: 'Gender Identity', risk: 'Safe', score: 12, color: 'bg-emerald-500' },
+              { name: 'Socioeconomic Proxy', risk: 'Warning', score: 45, color: 'bg-amber-500' },
+            ].map((hotspot) => (
+              <div key={hotspot.name} className="relative">
+                <div className="flex justify-between mb-2">
+                  <span className="text-xs font-black text-white uppercase tracking-wider">{hotspot.name}</span>
+                  <span className={`text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded-lg border ${
+                    hotspot.risk === 'Critical' ? 'bg-rose-500/20 text-rose-400 border-rose-500/30' :
+                    hotspot.risk === 'Warning' ? 'bg-amber-500/20 text-amber-400 border-amber-500/30' :
+                    'bg-emerald-500/20 text-emerald-400 border-emerald-500/30'
+                  }`}>
+                    {hotspot.risk}
+                  </span>
                 </div>
-              ))
-            )}
+                <div className="w-full bg-neutral-800 rounded-full h-1.5 overflow-hidden">
+                  <motion.div 
+                    className={`h-full ${hotspot.color}`}
+                    initial={{ width: 0 }}
+                    animate={{ width: `${hotspot.score}%` }}
+                    transition={{ duration: 1.5, ease: 'easeOut' }}
+                  />
+                </div>
+              </div>
+            ))}
+
+            <div className="mt-8 p-4 bg-black/40 rounded-2xl border border-neutral-800/50">
+              <div className="flex items-start gap-3">
+                <div className="p-1.5 bg-indigo-500/10 rounded-lg">
+                  <Bot className="text-indigo-400" size={14} />
+                </div>
+                <p className="text-[10px] text-neutral-400 leading-relaxed italic">
+                  "Guardian Analysis: The 'experience_years' feature shows high collinearity with age-protected groups. Recommend bias mitigation in the hiring model."
+                </p>
+              </div>
+            </div>
           </div>
         </motion.div>
       </div>

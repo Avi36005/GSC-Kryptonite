@@ -7,6 +7,8 @@ import Analyzer from './pages/Analyzer';
 import Compliance from './pages/Compliance';
 import Audit from './pages/Audit';
 import AuditChat from './pages/AuditChat';
+import DriftAnalysis from './pages/DriftAnalysis';
+import BigQueryExplorer from './pages/BigQueryExplorer';
 
 
 
@@ -32,6 +34,8 @@ export default function App() {
               <Route path="/compliance" element={<Compliance />} />
               <Route path="/audit" element={<Audit />} />
               <Route path="/audit-chat" element={<AuditChat />} />
+              <Route path="/drift" element={<DriftAnalysis />} />
+              <Route path="/bigquery" element={<BigQueryExplorer />} />
             </Routes>
           </main>
         </div>

@@ -4,6 +4,10 @@
 
 FairAI Guardian is an enterprise-grade platform designed to monitor, detect, and mitigate bias in AI models in real-time. It provides a comprehensive suite of tools for AI governance, from automated compliance auditing to high-fidelity conversational explainability.
 
+### 🔗 Live URLs
+- **Frontend App**: [https://fairai-494213-f8.web.app](https://fairai-494213-f8.web.app)
+- **Backend API**: [https://fairai-guardian-server-842068417000.us-central1.run.app/api](https://fairai-guardian-server-842068417000.us-central1.run.app/api)
+
 ---
 
 ## 🚀 Key Features
@@ -33,14 +37,24 @@ Direct integration with enterprise data warehouses for deep-dive forensic analys
 
 ## 🛠️ Technology Stack
 
-- **Frontend**: React 18, Vite, Framer Motion (Animations), Lucide (Icons), Recharts (Visualizations).
-- **Backend**: Node.js, Express, Socket.io (Real-time updates).
-- **Google Cloud Platform**:
-  - **Vertex AI**: Gemini Pro/Flash for RAG and Chat.
-  - **Cloud TTS/STT**: Neural2 high-fidelity voice processing.
-  - **BigQuery**: Large-scale data analytics.
-  - **Cloud Run**: Serverless backend deployment.
-  - **Firebase**: Global hosting and frontend delivery.
+### Frontend Architecture
+- **React 18 & Vite**: Lightning-fast development and optimized production builds.
+- **Tailwind CSS**: Modern, responsive UI with a premium dark-mode aesthetic.
+- **Framer Motion**: Smooth micro-animations and page transitions.
+- **Lucide & Recharts**: High-quality iconography and interactive data visualizations.
+
+### Backend Infrastructure
+- **Node.js & Express**: High-performance API orchestration.
+- **Socket.io**: Real-time bidirectional communication for live monitoring alerts.
+- **Google Cloud Run**: Serverless containerized backend for automatic scaling.
+
+### 🤖 Google Cloud AI & Data Services
+- **Vertex AI (Gemini Pro/Flash)**: Powers the **RAG (Retrieval-Augmented Generation)** engine for deep compliance analysis and policy explanations.
+- **Cloud Text-to-Speech (Neural2)**: Provides ultra-realistic, high-fidelity human voices for the AI Auditor.
+- **BigQuery**: Acts as the central data warehouse for forensic bias analysis and large-scale data storage.
+- **Firestore**: NoSQL database for real-time policy management and report caching.
+- **Cloud Pub/Sub**: Handles event-driven messaging for real-time drift detection pipelines.
+- **Firebase Hosting**: Fast, global content delivery for the web interface.
 
 ---
 

@@ -71,6 +71,15 @@ app.get('/', (req, res) => {
   res.send('FairAI Guardian API is running.');
 });
 
+// API Root Route — provides status instead of 'Cannot GET /api'
+app.get('/api', (req, res) => {
+  res.json({
+    status: 'online',
+    message: 'FairAI Guardian API is active. Use /api/health for system status.',
+    version: '2.5.0'
+  });
+});
+
 // GCP Health Check — shows real connection status of all services
 app.get('/api/health', (req, res) => {
   res.json({

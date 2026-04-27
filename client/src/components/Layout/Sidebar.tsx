@@ -13,7 +13,8 @@ import {
   Binary,
   Check,
   ChevronDown,
-  Database
+  Database,
+  History as HistoryIcon
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useDomain } from '../../context/DomainContext';
@@ -25,7 +26,9 @@ const links = [
   { name: 'Analyzer', path: '/analyzer', icon: ActivitySquare },
   { name: 'Interceptor', path: '/interceptor', icon: ShieldAlert },
   { name: 'Compliance', path: '/compliance', icon: Scale },
-  { name: 'Governance', path: '/audit', icon: History },
+  { name: 'Audit History', path: '/audit', icon: HistoryIcon },
+  { name: 'Drift Analysis', path: '/drift', icon: Binary },
+  { name: 'BigQuery', path: '/bigquery', icon: Database },
   { name: 'AI Auditor', path: '/audit-chat', icon: Bot },
 ];
 

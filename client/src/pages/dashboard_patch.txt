@@ -1,0 +1,55 @@
+<<<<
+  const chartData = useMemo(() => {
+    const arr = driftData?.historicalDrift;
+    if (Array.isArray(arr) && arr.length > 0) {
+      return arr.map((d: any) => ({
+        day: d.date ?? 'N/A',
+        drift: d.score ?? 0,
+        accuracy: typeof d.accuracy === 'number' ? d.accuracy : 90,
+        fairness: typeof d.fairness === 'number' ? d.fairness * 100 : 85,
+      }));
+    }
+    return driftTimeline;
+  }, [driftData]);
+====
+  const { latestReport } = useReport();
+
+  const chartData = useMemo(() => {
+    const arr = driftData?.historicalDrift;
+    const baseData = (Array.isArray(arr) && arr.length > 0) 
+      ? arr.map((d: any) => ({
+          day: d.date ? new Date(d.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : 'N/A',
+          drift: d.score ?? 0,
+          accuracy: typeof d.accuracy === 'number' ? d.accuracy : 90,
+          fairness: typeof d.fairness === 'number' ? d.fairness * 100 : 85,
+        }))
+      : driftTimeline;
+
+    // Session Persistence: Inject latest upload result into the graph
+    if (latestReport) {
+      const livePoint = {
+        day: 'Now (Live)',
+        drift: latestReport.overallBiasScore,
+        accuracy: 100 - (latestReport.overallBiasScore * 0.5),
+        fairness: 100 - latestReport.overallBiasScore
+      };
+      return [...baseData, livePoint];
+    }
+    return baseData;
+  }, [driftData, latestReport]);
+
+  const liveStats = useMemo(() => {
+    if (latestReport) {
+      return {
+        compliance: 100 - (latestReport.complianceViolations.length * 10),
+        drift: latestReport.overallBiasScore,
+        fairness: (100 - latestReport.overallBiasScore) / 100
+      };
+    }
+    return {
+      compliance: stats.compliance,
+      drift: driftScore || 4.2,
+      fairness: lastDrift?.fairness || 0.83
+    };
+  }, [latestReport, stats, driftScore, lastDrift]);
+>>>>

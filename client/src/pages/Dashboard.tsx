@@ -15,6 +15,7 @@ import { useEffect, useState, useMemo } from 'react';
 import { socket } from '../services/socket';
 import { api } from '../services/api';
 import { useDomain } from '../context/DomainContext';
+import { useReport } from '../context/ReportContext';
 
 const driftTimeline = [
   { day: 'Day 1', accuracy: 94.2, fairness: 92, drift: 1 },
@@ -144,18 +145,52 @@ export default function Dashboard() {
     };
   }, [activeDomain]);
 
+  const { latestReport } = useReport();
+
   const chartData = useMemo(() => {
     const arr = driftData?.historicalDrift;
-    if (Array.isArray(arr) && arr.length > 0) {
-      return arr.map((d: any) => ({
-        day: d.date ?? 'N/A',
-        drift: d.score ?? 0,
-        accuracy: typeof d.accuracy === 'number' ? d.accuracy : 90,
-        fairness: typeof d.fairness === 'number' ? d.fairness * 100 : 85,
-      }));
+    const baseData = (Array.isArray(arr) && arr.length > 0) 
+      ? arr.map((d: any) => ({
+          day: d.date ? new Date(d.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : 'N/A',
+          drift: d.score ?? 0,
+          accuracy: typeof d.accuracy === 'number' ? d.accuracy : 90,
+          fairness: typeof d.fairness === 'number' ? d.fairness * 100 : 85,
+        }))
+      : driftTimeline;
+
+    // Session Persistence: Inject latest upload result into the graph
+    if (latestReport) {
+      const livePoint = {
+        day: 'Now (Live)',
+        drift: latestReport.overallBiasScore,
+        accuracy: 100 - (latestReport.overallBiasScore * 0.5),
+        fairness: 100 - latestReport.overallBiasScore
+      };
+      return [...baseData, livePoint];
     }
-    return driftTimeline;
+    return baseData;
+  }, [driftData, latestReport]);
+
+  const lastDrift = useMemo(() => {
+    const arr = driftData?.historicalDrift;
+    if (Array.isArray(arr) && arr.length > 0) return arr[arr.length - 1];
+    return null;
   }, [driftData]);
+
+  const liveStats = useMemo(() => {
+    if (latestReport) {
+      return {
+        compliance: 100 - (latestReport.complianceViolations.length * 10),
+        drift: latestReport.overallBiasScore,
+        fairness: (100 - latestReport.overallBiasScore) / 100
+      };
+    }
+    return {
+      compliance: stats.compliance,
+      drift: driftScore || 4.2,
+      fairness: lastDrift?.fairness || 0.83
+    };
+  }, [latestReport, stats, driftScore, lastDrift]);
 
   const displayShifts = useMemo(() => {
     if (driftData?.driftContributors?.length) {
@@ -169,13 +204,7 @@ export default function Dashboard() {
         };
       });
     }
-    return featureShifts;
-  }, [driftData]);
-
-  const lastDrift = useMemo(() => {
-    const arr = driftData?.historicalDrift;
-    if (Array.isArray(arr) && arr.length > 0) return arr[arr.length - 1];
-    return null;
+    return [];
   }, [driftData]);
 
   return (
@@ -221,7 +250,7 @@ export default function Dashboard() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
         <KPI 
           title="Security Compliance" 
-          value={`${stats?.compliance || 0}%`} 
+          value={`${liveStats.compliance.toFixed(1)}%`} 
           trend="+2.4%" 
           trendUp={true} 
           icon={<ShieldCheck size={20} />} 
@@ -229,15 +258,15 @@ export default function Dashboard() {
         />
         <KPI 
           title="Model Drift" 
-          value={driftScore != null ? `${driftScore.toFixed(1)}%` : '4.2%'} 
-          trend={driftScore != null && driftScore > 10 ? "+1.2%" : "-0.3%"} 
-          trendUp={driftScore != null && driftScore > 10} 
+          value={`${liveStats.drift.toFixed(1)}%`} 
+          trend={liveStats.drift > 10 ? "+1.2%" : "-0.3%"} 
+          trendUp={liveStats.drift > 10} 
           icon={<Activity size={20} />} 
-          subtitle={driftScore != null && driftScore > 15 ? "Action Required" : "Within safe limits"}
+          subtitle={liveStats.drift > 15 ? "Action Required" : "Within safe limits"}
         />
         <KPI 
           title="Fairness Index" 
-          value={lastDrift && typeof lastDrift.fairness === 'number' ? lastDrift.fairness.toFixed(2) : '0.83'} 
+          value={liveStats.fairness.toFixed(2)} 
           trend="+0.02" 
           trendUp={true} 
           icon={<TrendingUp size={20} />} 

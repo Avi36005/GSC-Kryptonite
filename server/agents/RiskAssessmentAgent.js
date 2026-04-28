@@ -27,7 +27,7 @@ Respond strictly in JSON format:
   "reasoning": string
 }`;
 
-      const responseText = await geminiFlash(prompt);
+      const responseText = await geminiPro(prompt);
 
       const jsonMatch = responseText.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
@@ -46,18 +46,18 @@ Respond strictly in JSON format:
    */
   runRuleBasedCheck(features, domainConfig, originalReason) {
     console.warn(`[RiskAssessmentAgent] Falling back to rule-based engine. Reason: ${originalReason}`);
-    
+
     let riskLevel = 'LOW';
     let impactScore = 15;
     const riskFactors = [];
 
     const featureKeys = Object.keys(features);
-    
+
     if (domainConfig.rules) {
-      const triggeredRules = domainConfig.rules.filter(rule => 
+      const triggeredRules = domainConfig.rules.filter(rule =>
         rule.targetFeatures.some(target => featureKeys.includes(target))
       );
-      
+
       if (triggeredRules.some(r => r.severity === 'Critical' || r.severity === 'High')) {
         riskLevel = 'HIGH';
         impactScore = 75;
@@ -65,7 +65,7 @@ Respond strictly in JSON format:
         riskLevel = 'MEDIUM';
         impactScore = 50;
       }
-      
+
       triggeredRules.forEach(r => riskFactors.push(`${r.rule} (${r.severity})`));
     }
 
@@ -74,7 +74,7 @@ Respond strictly in JSON format:
       impactScore,
       riskFactors,
       mitigationSuggestions: riskLevel !== 'LOW' ? ['Flag for manual review', 'Validate data collection source'] : [],
-      reasoning: riskFactors.length > 0 
+      reasoning: riskFactors.length > 0
         ? `Deterministic scan identified potential ${riskLevel} risk factors: ${riskFactors.join(', ')}. (${originalReason})`
         : `Heuristic scan found no high-risk feature markers. (${originalReason})`,
       engine: 'RULE_BASED_FALLBACK'

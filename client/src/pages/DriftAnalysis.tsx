@@ -24,6 +24,8 @@ import {
   Bar,
   Cell
 } from 'recharts';
+import html2canvas from 'html2canvas';
+import { jsPDF } from 'jspdf';
 import { api } from '../services/api';
 import { useDomain } from '../context/DomainContext';
 import { useReport } from '../context/ReportContext';
@@ -87,6 +89,25 @@ export default function DriftAnalysis() {
     ]);
   };
 
+  const handleExport = async () => {
+    const element = document.getElementById('drift-dashboard');
+    if (!element) return;
+    
+    const canvas = await html2canvas(element, {
+      backgroundColor: '#0a0a0a',
+      scale: 2,
+    });
+    const imgData = canvas.toDataURL('image/png');
+    
+    const pdf = new jsPDF('l', 'mm', 'a4');
+    const imgProps = pdf.getImageProperties(imgData);
+    const pdfWidth = pdf.internal.pageSize.getWidth();
+    const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
+    
+    pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+    pdf.save(`FairAI-Drift-Report-${activeDomain}-${new Date().toISOString().split('T')[0]}.pdf`);
+  };
+
   const currentDrift = driftData.length > 0 ? driftData[driftData.length - 1].score : 0;
   const driftTrend = driftData.length > 1 
     ? (driftData[driftData.length - 1].score - driftData[driftData.length - 2].score).toFixed(1)
@@ -137,7 +158,10 @@ export default function DriftAnalysis() {
             <AlertTriangle size={16} />
             Test Drift
           </button>
-          <button className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-sm font-semibold rounded-lg transition-all shadow-lg shadow-blue-900/20">
+          <button 
+            onClick={handleExport}
+            className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-sm font-semibold rounded-lg transition-all shadow-lg shadow-blue-900/20"
+          >
             <Download size={16} />
             Export Report
           </button>
@@ -164,7 +188,8 @@ export default function DriftAnalysis() {
         </motion.div>
       )}
 
-      {/* KPI Cards */}
+      <div id="drift-dashboard" className="space-y-8">
+        {/* KPI Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         {[
           { 

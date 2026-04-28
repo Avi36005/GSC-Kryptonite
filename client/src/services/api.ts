@@ -1,4 +1,4 @@
-export const API_BASE = import.meta.env.VITE_API_URL ? `${import.meta.env.VITE_API_URL}/api` : 'https://fairai-guardian-server-842068417000.us-central1.run.app/api';
+export const API_BASE = import.meta.env.VITE_API_URL ? `${import.meta.env.VITE_API_URL}/api` : 'https://fairai-guardian-server-mnadbwxyvq-uc.a.run.app/api';
 
 const TIMEOUT = 120000; // 120 seconds default for heavy AI analysis
 

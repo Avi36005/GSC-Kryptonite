@@ -25,13 +25,14 @@ interface DecisionEvent {
   explanation: string;
   engine?: string;
   status?: string;
+  features?: Record<string, any>;
 }
 
 const SAMPLE_SCENARIOS = [
-  { id: 'LOAN-001', features: { age: 34, income: 55000, zip_code: '90210', credit_score: 680, employment_years: 5 }, prediction: 'DENIED' },
-  { id: 'HIRE-002', features: { age: 28, gender: 'female', university: 'State College', gpa: 3.6, club_membership: 'none' }, prediction: 'REJECTED' },
-  { id: 'INSURE-003', features: { age: 62, health_score: 72, location: 'rural', income: 32000 }, prediction: 'HIGH_PREMIUM' },
-  { id: 'LOAN-004', features: { age: 45, income: 120000, zip_code: '10001', credit_score: 790, employment_years: 12 }, prediction: 'APPROVED' },
+  { id: 'LOAN-001', features: { age: 34, income: 55000, zip_code: '90210', credit_score: 680, employment_years: 5 }, action: 'DENIED' },
+  { id: 'HIRE-002', features: { age: 28, gender: 'female', university: 'State College', gpa: 3.6, club_membership: 'none' }, action: 'REJECTED' },
+  { id: 'INSURE-003', features: { age: 62, health_score: 72, location: 'rural', income: 32000 }, action: 'HIGH_PREMIUM' },
+  { id: 'LOAN-004', features: { age: 45, income: 120000, zip_code: '10001', credit_score: 790, employment_years: 12 }, action: 'APPROVED' },
 ];
 
 export default function Interceptor() {
@@ -41,6 +42,7 @@ export default function Interceptor() {
   const [fixing, setFixing] = useState(false);
   const [autoFixResult, setAutoFixResult] = useState<any>(null);
   const [isHalted, setIsHalted] = useState(false);
+  const [isConnected, setIsConnected] = useState(socket.connected);
   const feedRef = useRef<HTMLDivElement>(null);
   const { activeDomain, domainConfig } = useDomain();
   const { latestReport } = useReport();
@@ -57,7 +59,7 @@ export default function Interceptor() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           decisionId: selectedEvent.decisionId,
-          features: (selectedEvent as any).features || { age: 34, income: 55000, zip_code: '90210' },
+          features: selectedEvent.features || { age: 34, income: 55000, zip_code: '90210' },
           prediction: selectedEvent.originalPrediction,
           biasReport: selectedEvent.biasReport,
           complianceReport: selectedEvent.complianceReport,
@@ -78,8 +80,25 @@ export default function Interceptor() {
       setIsHalted(status.halt);
     });
 
+    api.getDecisions().then(data => {
+      if (Array.isArray(data)) {
+        setEvents(data);
+      }
+    });
+
+    const onConnect = () => setIsConnected(true);
+    const onDisconnect = () => setIsConnected(false);
+
+    socket.on('connect', onConnect);
+    socket.on('disconnect', onDisconnect);
+
     socket.on('new_decision_intercepted', (data: DecisionEvent) => {
-      setEvents((prev) => [...prev, data]);
+      setEvents((prev) => {
+        // De-duplicate: check if this decision already exists in the feed
+        const exists = prev.some(e => e.decisionId === data.decisionId && e.timestamp === data.timestamp);
+        if (exists) return prev;
+        return [...prev, data];
+      });
       setSelectedEvent(data);
     });
 
@@ -88,6 +107,8 @@ export default function Interceptor() {
     });
 
     return () => { 
+      socket.off('connect', onConnect);
+      socket.off('disconnect', onDisconnect);
       socket.off('new_decision_intercepted'); 
       socket.off('system_status_change');
     };
@@ -105,7 +126,12 @@ export default function Interceptor() {
       // Use features from scenario if available, else fallback
       const features = scenario.features || { age: 34, income: 55000, zip_code: '90210', club_membership: 'vip' };
       const result = await api.analyzeDecision(scenario.id, features, scenario.action, activeDomain);
-      setEvents((prev) => [...prev, result]);
+      // The socket listener will also receive this, but we update locally for immediate feedback
+      setEvents((prev) => {
+        const exists = prev.some(e => e.decisionId === result.decisionId && e.timestamp === result.timestamp);
+        if (exists) return prev;
+        return [...prev, result];
+      });
       setSelectedEvent(result);
     } catch (err) {
       console.error('Failed to intercept decision:', err);
@@ -211,8 +237,9 @@ export default function Interceptor() {
               <ActivitySquare size={18} className="text-white" />
               Live Monitoring Stream
             </h2>
-            <span className="flex items-center gap-2 text-[10px] text-emerald-400 bg-emerald-500/10 px-3 py-1.5 rounded-full font-bold uppercase tracking-widest border border-emerald-500/20">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span> Protected
+            <span className={`flex items-center gap-2 text-[10px] ${isConnected ? 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20' : 'text-rose-400 bg-rose-500/10 border-rose-500/20'} px-3 py-1.5 rounded-full font-bold uppercase tracking-widest border`}>
+              <span className={`w-1.5 h-1.5 rounded-full ${isConnected ? 'bg-emerald-500 animate-pulse' : 'bg-rose-500'}`}></span> 
+              {isConnected ? 'Live Stream Active' : 'Stream Disconnected'}
             </span>
           </div>
           <div ref={feedRef} className="flex-1 p-5 font-mono text-sm space-y-4 overflow-y-auto max-h-[600px] scrollbar-hide">

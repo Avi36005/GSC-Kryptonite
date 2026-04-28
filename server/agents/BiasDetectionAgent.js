@@ -27,7 +27,7 @@ Respond strictly in JSON format:
   "reasoning": string
 }`;
 
-      const responseText = await geminiFlash(prompt);
+      const responseText = await geminiPro(prompt);
 
       const jsonMatch = responseText.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
@@ -46,7 +46,7 @@ Respond strictly in JSON format:
    */
   runRuleBasedCheck(features, domainConfig, originalReason) {
     console.warn(`[BiasDetectionAgent] Falling back to rule-based engine for ${domainConfig.name}. Reason: ${originalReason}`);
-    
+
     const flaggedFeatures = [];
     const featureKeys = Object.keys(features);
 
@@ -66,7 +66,7 @@ Respond strictly in JSON format:
       isBiased: uniqueFlagged.length > 0,
       confidenceScore: uniqueFlagged.length > 0 ? 100 : 0, // Deterministic
       flaggedFeatures: uniqueFlagged,
-      reasoning: uniqueFlagged.length > 0 
+      reasoning: uniqueFlagged.length > 0
         ? `Rule-based engine detected prohibited proxies: ${uniqueFlagged.join(', ')}. (${originalReason})`
         : `Deterministic scan found no prohibited proxies. (${originalReason})`,
       engine: 'RULE_BASED_FALLBACK'

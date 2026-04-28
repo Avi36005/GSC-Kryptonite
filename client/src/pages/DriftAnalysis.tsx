@@ -418,6 +418,7 @@ export default function DriftAnalysis() {
           </div>
         </motion.div>
       </div>
+      </div>
     </div>
   );
 }

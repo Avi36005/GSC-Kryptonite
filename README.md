@@ -89,6 +89,7 @@ FairAI Guardian provides an end-to-end, Google Cloud-native AI governance soluti
 |---|---|
 | **📊 Bias Detection Engine** | Gemini 2.5 Pro-powered deep analysis of datasets for direct bias, proxy discrimination, and statistical disparities |
 | **🛡️ Real-Time Interceptor** | Multi-agent pipeline that intercepts AI decisions in <30s SLA with fail-safe bypass |
+| **🎙️ Vertex AI Voice** | Native Text-to-Speech and Speech-to-Text for a fully conversational AI Auditor |
 | **⚖️ Compliance Checker** | Automated verification against EU AI Act, GDPR, Title VII, ADEA, HIPAA, FERPA, and ECOA |
 | **🤖 AI Auditor Chatbot** | Gemini 2.5 Flash-powered conversational AI with full system awareness via Firestore |
 | **🔧 Auto Bias Fix** | AI-generated corrections that rewrite biased decisions to be fair and compliant |
@@ -230,6 +231,7 @@ FairAI Guardian uses a **7-agent architecture**, each with a specialized role:
 | **BigQuery** | Long-term decision analytics, drift detection, and temporal trend analysis |
 | **Cloud Pub/Sub** | Real-time event streaming for bias alerts and system notifications |
 | **Cloud Run** | Containerized backend deployment with auto-scaling |
+| **Vertex AI Voice** | High-fidelity neural Text-to-Speech and Speech-to-Text |
 | **Firebase Hosting** | Global CDN for the React frontend with SPA rewrites |
 | **Application Default Credentials** | Unified auth — no API keys, service accounts in production |
 

@@ -78,7 +78,7 @@ FairAI Guardian provides an end-to-end, Google Cloud-native AI governance soluti
 | Resource | Link |
 |---|---|
 | 🌐 **Live Application** | [https://fairai-494213-f8.web.app](https://fairai-494213-f8.web.app) |
-| 🎬 **Demo Video (3 min)** | _[Coming Soon]_ |
+| 🎬 **Demo Video (3 min)** | [Google Drive Link](https://drive.google.com/drive/folders/1eg5pneSHeANn--do70OHXentAEK7KNQm) |
 | 📦 **Repository** | [github.com/Avi36005/GSC-Kryptonite](https://github.com/Avi36005/GSC-Kryptonite) |
 
 ---

@@ -47,16 +47,28 @@ export default function Landing() {
         </motion.p>
 
         {/* Primary Button */}
-        <motion.button
+        <motion.div
           initial={{ opacity: 0, y: 15 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.3 }}
-          onClick={() => navigate('/dashboard')}
-          className="bg-white text-black font-semibold rounded-lg px-8 py-3 hover:bg-neutral-200 transition-colors duration-200 mb-20 flex items-center gap-2"
+          className="flex flex-col sm:flex-row gap-4 mb-20"
         >
-          Get Started
-          <ArrowRight size={18} />
-        </motion.button>
+          <button
+            onClick={() => navigate('/dashboard')}
+            className="bg-white text-black font-semibold rounded-lg px-8 py-3 hover:bg-neutral-200 transition-colors duration-200 flex items-center justify-center gap-2"
+          >
+            Get Started
+            <ArrowRight size={18} />
+          </button>
+          <a
+            href="https://drive.google.com/drive/folders/1eg5pneSHeANn--do70OHXentAEK7KNQm"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="bg-transparent border border-neutral-700 text-white font-semibold rounded-lg px-8 py-3 hover:bg-white/5 transition-colors duration-200 flex items-center justify-center gap-2"
+          >
+            Watch Demo
+          </a>
+        </motion.div>
 
         {/* Pipeline / Links section */}
         <motion.div
